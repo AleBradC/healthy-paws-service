@@ -34,3 +34,4 @@ Thumbs.db
 # Optional editor directories
 .vscode/
 .idea/
+.node_modules
