@@ -1,23 +1,27 @@
-// Configures the Passport.js local strategy and session management.
-// It also sets up user serialization for sessions.
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { AuthenticationService } from "./auth-service";
+import pool from "../db"; // <-- Import the database pool
 
-const authenticationService = new AuthenticationService();
+// Pass the database pool to the AuthenticationService constructor
+const authenticationService = new AuthenticationService(pool);
 
 passport.use(
-  new LocalStrategy(async (email, password, done) => {
-    try {
-      const user = await authenticationService.validateUser(email, password);
-      if (!user) {
-        return done(null, false, { message: "Invalid email or password." });
+  new LocalStrategy(
+    { usernameField: "email" },
+    async (email, password, done) => {
+      // Added usernameField
+      try {
+        const user = await authenticationService.validateUser(email, password);
+        if (!user) {
+          return done(null, false, { message: "Invalid email or password." });
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err);
       }
-      return done(null, user);
-    } catch (err) {
-      return done(err);
     }
-  })
+  )
 );
 
 // Serialize user instance to the session
@@ -35,4 +39,4 @@ passport.deserializeUser(async (id: string, done) => {
   }
 });
 
-export { passport, authenticationService };
+export { passport }; // You no longer need to export the service instance

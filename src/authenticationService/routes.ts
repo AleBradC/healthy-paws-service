@@ -1,9 +1,15 @@
 // Defines the API endpoints for registration, login, logout, and protected resources.
 import { Router, Request, Response } from "express";
-import { passport, authenticationService } from "./passport-config";
+import { passport } from "./passport-config";
+import { AuthenticationService } from "./auth-service"; // Import the class
+import pool from "../db"; // Import the database pool
 import crypto from "crypto";
 
 const router = Router();
+
+// Create an instance of the service, passing in the database pool
+const authenticationService = new AuthenticationService(pool);
+
 const passwordResetTokens: { [token: string]: string } = {};
 
 // Register
@@ -15,6 +21,7 @@ router.post("/register", async (req: Request, res: Response) => {
       .json({ message: "Email and password are required." });
   }
 
+  // Use the service instance created above
   const user = await authenticationService.register(email, password);
   if (!user) {
     return res.status(409).json({ message: "Email already exists." });
@@ -23,7 +30,7 @@ router.post("/register", async (req: Request, res: Response) => {
   res.status(201).json({ message: "User registered successfully." });
 });
 
-//Login
+// Login
 router.post(
   "/login",
   passport.authenticate("local"),
@@ -32,7 +39,7 @@ router.post(
   }
 );
 
-//Logout
+// Logout
 router.post("/logout", (req: Request, res: Response) => {
   req.logout((err) => {
     if (err) {
@@ -50,15 +57,16 @@ router.get("/profile", (req: Request, res: Response) => {
   res.status(401).json({ message: "Unauthorized" });
 });
 
+// Forgot Password
 router.post("/forgot-password", async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ message: "Email is required." });
   }
 
+  // Use the service instance
   const user = await authenticationService.findUserByEmail(email);
   if (!user) {
-    // To prevent email enumeration, you can send a success response even if the user doesn't exist.
     return res.json({
       message:
         "If a user with that email exists, a password reset link has been sent.",
@@ -68,9 +76,7 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
   const token = crypto.randomBytes(32).toString("hex");
   passwordResetTokens[token] = user.id;
 
-  // In a real application, you would send an email here.
   console.log(`Password reset token for ${email}: ${token}`);
-  // TODO: Implement an email service to send the token to the user.
 
   res.json({
     message:
@@ -78,6 +84,7 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
   });
 });
 
+// Reset Password
 router.post("/reset-password/:token", async (req: Request, res: Response) => {
   const { token } = req.params;
   const { newPassword } = req.body;
@@ -91,13 +98,13 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
     return res.status(400).json({ message: "New password is required." });
   }
 
+  // Use the service instance
   const success = await authenticationService.resetPassword(
     userId,
     newPassword
   );
 
   if (success) {
-    // Invalidate the token after use
     delete passwordResetTokens[token];
     res.json({ message: "Password has been reset successfully." });
   } else {

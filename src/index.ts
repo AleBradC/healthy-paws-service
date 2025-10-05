@@ -5,6 +5,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import { passport } from "./authenticationService/passport-config";
 import authRoutes from "./authenticationService/routes";
+import pool from "./db";
 
 dotenv.config();
 
@@ -27,9 +28,18 @@ app.use(passport.session());
 app.use("/auth", authRoutes);
 
 const startServer = async () => {
-  app.listen(PORT, () => {
-    console.log(`Listening on port ${PORT}...`);
-  });
+  try {
+    const client = await pool.connect();
+    console.log("Successfully connected to the database.");
+    client.release(); // Release the client back to the pool
+
+    app.listen(PORT, () => {
+      console.log(`Listening on port ${PORT}...`);
+    });
+  } catch (err) {
+    console.error("Failed to connect to the database.", err);
+    process.exit(1);
+  }
 };
 
 startServer();
