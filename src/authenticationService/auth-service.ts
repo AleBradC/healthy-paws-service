@@ -64,4 +64,31 @@ export class AuthenticationService {
     const { hash, salt, ...userResult } = user;
     return userResult;
   }
+
+  public async findUserByEmail(
+    email: string
+  ): Promise<Omit<User, "hash" | "salt"> | null> {
+    const user = this.users.find((u) => u.email === email);
+    if (!user) {
+      return null;
+    }
+    const { hash, salt, ...userResult } = user;
+    return userResult;
+  }
+
+  public async resetPassword(
+    userId: string,
+    newPassword: string
+  ): Promise<boolean> {
+    const user = this.users.find((u) => u.id === userId);
+    if (!user) {
+      return false;
+    }
+
+    // Generate a new salt and hash for the new password
+    user.salt = crypto.randomBytes(16).toString("hex");
+    user.hash = this.hashPassword(newPassword, user.salt);
+
+    return true;
+  }
 }
