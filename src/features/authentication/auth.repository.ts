@@ -1,11 +1,5 @@
 import { Pool, QueryResult } from "pg";
-
-interface UserRecord {
-  id: string;
-  email: string;
-  hash: string;
-  salt: string;
-}
+import { UserRecord } from "./types";
 
 export class AuthRepository {
   private db: Pool;
@@ -30,15 +24,42 @@ export class AuthRepository {
     return result.rows[0] || null;
   }
 
+  // Updated createUser to accept all new fields
   public async createUser(
-    id: string,
-    email: string,
-    hash: string,
-    salt: string
+    userData: Omit<UserRecord, "id" | "hash" | "salt"> & {
+      id: string;
+      hash: string;
+      salt: string;
+    }
   ): Promise<{ id: string; email: string }> {
+    const {
+      id,
+      name,
+      email,
+      hash,
+      salt,
+      pet_name,
+      pet_type,
+      pet_breed,
+      pet_age,
+      pet_weight,
+    } = userData;
     const result = await this.db.query(
-      "INSERT INTO users (id, email, hash, salt) VALUES ($1, $2, $3, $4) RETURNING id, email",
-      [id, email, hash, salt]
+      `INSERT INTO users (id, name, email, hash, salt, pet_name, pet_type, pet_breed, pet_age, pet_weight)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, email`,
+      [
+        id,
+        name,
+        email,
+        hash,
+        salt,
+        pet_name,
+        pet_type,
+        pet_breed,
+        pet_age,
+        pet_weight,
+      ]
     );
     return result.rows[0];
   }

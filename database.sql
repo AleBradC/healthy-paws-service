@@ -2,9 +2,15 @@
  
 CREATE TABLE users (
     id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     hash VARCHAR(128) NOT NULL,
     salt VARCHAR(32) NOT NULL,
+    pet_name VARCHAR(255) NOT NULL,
+    pet_type VARCHAR(50) NOT NULL,
+    pet_breed VARCHAR(100) NOT NULL,
+    pet_age INT NOT NULL,
+    pet_weight NUMERIC(5, 2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

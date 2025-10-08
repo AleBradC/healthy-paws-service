@@ -13,19 +13,39 @@ export class AuthController {
   }
 
   public register = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required." });
+    const {
+      name,
+      email,
+      password,
+      petName,
+      petType,
+      petBreed,
+      petAge,
+      petWeight,
+    } = req.body;
+
+    if (!name || !email || !password || !petName) {
+      return res.status(400).json({ message: "Required fields are missing." });
     }
 
-    const user = await this.authService.register(email, password);
+    const payload = {
+      name,
+      email,
+      password,
+      petName,
+      petType,
+      petBreed,
+      petAge: Number(petAge),
+      petWeight: Number(petWeight),
+    };
+
+    const user = await this.authService.register(payload);
+
     if (!user) {
       return res.status(409).json({ message: "Email already exists." });
     }
 
-    res.status(201).json({ message: "User registered successfully." });
+    res.status(201).json({ message: "User registered successfully.", user });
   };
 
   public login = (req: Request, res: Response) => {

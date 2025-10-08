@@ -1,6 +1,17 @@
 import crypto from "crypto";
 import { AuthRepository } from "./auth.repository";
 
+type RegisterPayload = {
+  name: string;
+  email: string;
+  password: string;
+  petName: string;
+  petType: string;
+  petBreed: string;
+  petAge: number;
+  petWeight: number;
+};
+
 export class AuthenticationService {
   private authRepository: AuthRepository;
 
@@ -14,17 +25,32 @@ export class AuthenticationService {
       .toString("hex");
   }
 
-  public async register(email: string, password: string) {
-    const existingUser = await this.authRepository.findUserByEmail(email);
+  public async register(payload: RegisterPayload) {
+    const existingUser = await this.authRepository.findUserByEmail(
+      payload.email
+    );
     if (existingUser) {
-      return "User already exists";
+      return null; // Return null to indicate user already exists
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
-    const hash = this.hashPassword(password, salt);
+    const hash = this.hashPassword(payload.password, salt);
     const id = crypto.randomUUID();
 
-    return this.authRepository.createUser(id, email, hash, salt);
+    const newUser = {
+      id,
+      name: payload.name,
+      email: payload.email,
+      hash,
+      salt,
+      pet_name: payload.petName,
+      pet_type: payload.petType,
+      pet_breed: payload.petBreed,
+      pet_age: payload.petAge,
+      pet_weight: payload.petWeight,
+    };
+
+    return this.authRepository.createUser(newUser);
   }
 
   public async validateUser(email: string, password: string) {
