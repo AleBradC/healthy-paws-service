@@ -1,6 +1,12 @@
-import crypto from "crypto";
+import * as crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository";
-import { RegisterPayload, OwnerRecord } from "./types";
+import {
+  RegisterOwnerPayload,
+  RegisterDoctorPayload,
+  UserRecord,
+} from "./types";
+import { ROLES } from "./constants";
 
 export class AuthenticationService {
   private authRepository: AuthRepository;
@@ -15,77 +21,88 @@ export class AuthenticationService {
       .toString("hex");
   }
 
-  public async register(payload: RegisterPayload) {
-    const existingOwner = await this.authRepository.findOwnerByEmail(
+  public async registerOwner(payload: RegisterOwnerPayload) {
+    const existingUser = await this.authRepository.findUserByEmail(
       payload.owner.email
     );
-    if (existingOwner) {
-      return null;
+    if (existingUser) {
+      throw new Error("An account with this email already exists.");
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
     const hash = this.hashPassword(payload.owner.password, salt);
-    const ownerId = crypto.randomUUID();
 
-    const newOwner: OwnerRecord = {
-      id: ownerId,
-      name: payload.owner.name,
+    return this.authRepository.createOwnerAndAnimal({
       email: payload.owner.email,
       hash,
       salt,
-    };
-
-    const newAnimal = {
-      name: payload.animal.name,
-      type: payload.animal.type,
-      breed: payload.animal.breed,
-      age: payload.animal.age,
-      weight: payload.animal.weight,
-    };
-
-    return this.authRepository.createOwnerAndAnimal(newOwner, newAnimal);
+      role: ROLES.OWNER_ROLE,
+      ownerName: payload.owner.name,
+      animalData: payload.animal,
+    });
   }
 
-  public async validateUser(email: string, password: string) {
-    const owner = await this.authRepository.findOwnerByEmail(email);
-    if (!owner) {
-      return "User not found";
+  public async registerDoctor(payload: RegisterDoctorPayload) {
+    const existingUser = await this.authRepository.findUserByEmail(
+      payload.doctor.email
+    );
+    if (existingUser) {
+      throw new Error("An account with this email already exists.");
     }
 
-    const calculatedHash = this.hashPassword(password, owner.salt);
-    if (calculatedHash === owner.hash) {
-      const { hash, salt, ...ownerResult } = owner;
-      return ownerResult; // todo Return owner data without hash and salt
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = this.hashPassword(payload.doctor.password, salt);
+
+    return this.authRepository.createDoctor({
+      email: payload.doctor.email,
+      hash,
+      salt,
+      role: ROLES.DOCTOR_ROLE,
+      doctorData: payload.doctor,
+    });
+  }
+
+  public async validateUser(
+    email: string,
+    password: string
+  ): Promise<Pick<UserRecord, "id" | "email" | "role"> | null> {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) return null;
+
+    const calculatedHash = this.hashPassword(password, user.salt);
+    if (calculatedHash === user.hash) {
+      return { id: user.id, email: user.email, role: user.role };
     }
 
-    return "Invalid password";
+    return null;
+  }
+
+  public generateAccessToken(user: { id: string; role: string }): string {
+    const payload = { userId: user.id, role: user.role };
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined in environment variables.");
+    }
+    return jwt.sign(payload, secret, { expiresIn: "1h" });
   }
 
   public async findUserById(id: string) {
-    const owner = await this.authRepository.findOwnerById(id);
-    if (!owner) return null;
-    const { hash, salt, ...ownerResult } = owner;
-    return ownerResult;
-  }
-
-  public async findUserByEmail(email: string) {
-    const owner = await this.authRepository.findOwnerByEmail(email);
-    if (!owner) return null;
-    const { hash, salt, ...ownerResult } = owner;
-    return ownerResult;
+    const user = await this.authRepository.findUserById(id);
+    if (!user) return null;
+    const { hash, salt, ...userResult } = user;
+    return userResult;
   }
 
   public async resetPassword(
     userId: string,
     newPassword: string
   ): Promise<string> {
-    const owner = await this.authRepository.findOwnerById(userId);
-    if (!owner) {
-      return "User not found";
-    }
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) return "User not found";
 
     const newSalt = crypto.randomBytes(16).toString("hex");
     const newHash = this.hashPassword(newPassword, newSalt);
+
     await this.authRepository.updateUserPassword(userId, newHash, newSalt);
 
     return "Password was changed";

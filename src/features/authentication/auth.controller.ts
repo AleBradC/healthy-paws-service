@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthenticationService } from "./auth.service";
-import { RegisterPayload } from "./types"; // Use the main payload type
+import { RegisterDoctorPayload, RegisterOwnerPayload } from "./types";
+import { ROLES } from "./constants";
 
 const passwordResetTokens: {
   [token: string]: { userId: string; expires: number };
@@ -14,42 +15,44 @@ export class AuthController {
   }
 
   public register = async (req: Request, res: Response) => {
-    const { owner, animal } = req.body as RegisterPayload;
-
-    if (!owner || !owner.name || !owner.email || !owner.password) {
-      return res
-        .status(400)
-        .json({ message: "Owner details are missing or incomplete." });
-    }
-    if (!animal || !animal.name) {
-      return res
-        .status(400)
-        .json({ message: "Animal details are missing or incomplete." });
-    }
-
-    const payload: RegisterPayload = {
-      owner: {
-        ...owner,
-      },
-      animal: {
-        ...animal,
-        age: Number(animal.age),
-        weight: Number(animal.weight),
-      },
-    };
+    const { role, owner, animal, doctor } = req.body;
 
     try {
-      const newOwner = await this.authService.register(payload);
-
-      if (!newOwner) {
-        return res.status(409).json({ message: "Email already exists." });
+      if (role === ROLES.OWNER_ROLE) {
+        if (!owner || !animal) {
+          return res
+            .status(400)
+            .json({ message: "Owner and animal details are required." });
+        }
+        const payload: RegisterOwnerPayload = { owner, animal };
+        const newOwner = await this.authService.registerOwner(payload);
+        return res.status(201).json({
+          message: "Pet owner registered successfully.",
+          user: newOwner,
+        });
+      } else if (role === ROLES.DOCTOR_ROLE) {
+        if (!doctor) {
+          return res
+            .status(400)
+            .json({ message: "Doctor details are required." });
+        }
+        const payload: RegisterDoctorPayload = { doctor };
+        const newDoctor = await this.authService.registerDoctor(payload);
+        return res.status(201).json({
+          message: "Doctor registered successfully.",
+          user: newDoctor,
+        });
+      } else {
+        return res.status(400).json({
+          message: "A valid role ('owner' or 'doctor') must be specified.",
+        });
       }
-
-      res.status(201).json({
-        message: "User and pet registered successfully.",
-        owner: newOwner,
-      });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("already exists")) {
+        return res
+          .status(409)
+          .json({ message: "An account with this email already exists." });
+      }
       console.error("Registration Error:", error);
       res.status(500).json({ message: "An internal server error occurred." });
     }

@@ -1,12 +1,10 @@
-// Register
-// ------ Payload
+// --- PAYLOAD TYPES (Data sent from Frontend to Backend) ---
 export interface OwnerPayload {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword: string; // Used for validation, not stored in DB
 }
-
 export interface AnimalPayload {
   name: string;
   type: string;
@@ -14,34 +12,70 @@ export interface AnimalPayload {
   age: number;
   weight: number;
 }
-
-export interface RegisterPayload {
+export interface RegisterOwnerPayload {
   owner: OwnerPayload;
   animal: AnimalPayload;
 }
-
-// ------ DB
-export interface OwnerRecord {
-  id: string; // Typically a UUID
+export interface DoctorPayload {
   name: string;
+  email: string;
+  password: string;
+  specialty: string;
+  clinic: string;
+  address: string;
+  services: {
+    service: string;
+    price: number;
+  }[];
+}
+export interface RegisterDoctorPayload {
+  doctor: DoctorPayload;
+}
+
+// API
+export interface UnifiedRegisterPayload {
+  role: "owner" | "doctor";
+  owner?: OwnerPayload;
+  animal?: AnimalPayload;
+  doctor?: DoctorPayload;
+}
+
+// --- DATABASE RECORD TYPES (Represents data structure in your PostgreSQL database) ---
+
+export interface UserRecord {
+  id: string; // UUID
   email: string;
   hash: string;
   salt: string;
-  createdAt?: Date;
+  role: "owner" | "doctor";
+  created_at?: Date;
+}
+
+export interface OwnerRecord {
+  id: string; // UUID
+  user_id: string; // Foreign Key to 'users' table
+  name: string;
+  created_at?: Date;
+}
+
+export interface DoctorRecord {
+  id: string; // UUID
+  user_id: string; // Foreign Key to 'users' table
+  name: string;
+  specialization: string;
+  clinic_name: string;
+  clinic_address: string;
+  image_url?: string;
+  created_at?: Date;
 }
 
 export interface AnimalRecord {
-  id: string; // Typically a UUID
-  ownerId: string; // Foreign Key referencing the Owner's id
+  id: string; // UUID
+  owner_id: string; // Foreign Key to 'owners' table
   name: string;
   type: string;
   breed: string;
   age: number;
   weight: number;
-  createdAt?: Date;
-}
-
-export interface UserRecord {
-  owner: OwnerRecord;
-  animals: AnimalRecord;
+  created_at?: Date;
 }
