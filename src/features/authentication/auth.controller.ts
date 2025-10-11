@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AuthenticationService } from "./auth.service";
+import { RegisterPayload } from "./types"; // Use the main payload type
 
 const passwordResetTokens: {
   [token: string]: { userId: string; expires: number };
@@ -13,39 +14,45 @@ export class AuthController {
   }
 
   public register = async (req: Request, res: Response) => {
-    const {
-      name,
-      email,
-      password,
-      petName,
-      petType,
-      petBreed,
-      petAge,
-      petWeight,
-    } = req.body;
+    const { owner, animal } = req.body as RegisterPayload;
 
-    if (!name || !email || !password || !petName) {
-      return res.status(400).json({ message: "Required fields are missing." });
+    if (!owner || !owner.name || !owner.email || !owner.password) {
+      return res
+        .status(400)
+        .json({ message: "Owner details are missing or incomplete." });
+    }
+    if (!animal || !animal.name) {
+      return res
+        .status(400)
+        .json({ message: "Animal details are missing or incomplete." });
     }
 
-    const payload = {
-      name,
-      email,
-      password,
-      petName,
-      petType,
-      petBreed,
-      petAge: Number(petAge),
-      petWeight: Number(petWeight),
+    const payload: RegisterPayload = {
+      owner: {
+        ...owner,
+      },
+      animal: {
+        ...animal,
+        age: Number(animal.age),
+        weight: Number(animal.weight),
+      },
     };
 
-    const user = await this.authService.register(payload);
+    try {
+      const newOwner = await this.authService.register(payload);
 
-    if (!user) {
-      return res.status(409).json({ message: "Email already exists." });
+      if (!newOwner) {
+        return res.status(409).json({ message: "Email already exists." });
+      }
+
+      res.status(201).json({
+        message: "User and pet registered successfully.",
+        owner: newOwner,
+      });
+    } catch (error) {
+      console.error("Registration Error:", error);
+      res.status(500).json({ message: "An internal server error occurred." });
     }
-
-    res.status(201).json({ message: "User registered successfully.", user });
   };
 
   public login = (req: Request, res: Response) => {
@@ -72,17 +79,16 @@ export class AuthController {
         .status(400)
         .json({ message: "Token is invalid or has expired." });
     }
-
     if (!newPassword) {
       return res.status(400).json({ message: "New password is required." });
     }
 
-    const success = await this.authService.resetPassword(
+    const resultMessage = await this.authService.resetPassword(
       tokenData.userId,
       newPassword
     );
 
-    if (success) {
+    if (resultMessage === "Password was changed") {
       delete passwordResetTokens[token];
       return res
         .status(200)

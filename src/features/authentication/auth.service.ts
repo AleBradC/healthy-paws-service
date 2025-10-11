@@ -1,16 +1,6 @@
 import crypto from "crypto";
 import { AuthRepository } from "./auth.repository";
-
-type RegisterPayload = {
-  name: string;
-  email: string;
-  password: string;
-  petName: string;
-  petType: string;
-  petBreed: string;
-  petAge: number;
-  petWeight: number;
-};
+import { RegisterPayload, OwnerRecord } from "./types";
 
 export class AuthenticationService {
   private authRepository: AuthRepository;
@@ -26,68 +16,71 @@ export class AuthenticationService {
   }
 
   public async register(payload: RegisterPayload) {
-    const existingUser = await this.authRepository.findUserByEmail(
-      payload.email
+    const existingOwner = await this.authRepository.findOwnerByEmail(
+      payload.owner.email
     );
-    if (existingUser) {
-      return null; // Return null to indicate user already exists
+    if (existingOwner) {
+      return null;
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
-    const hash = this.hashPassword(payload.password, salt);
-    const id = crypto.randomUUID();
+    const hash = this.hashPassword(payload.owner.password, salt);
+    const ownerId = crypto.randomUUID();
 
-    const newUser = {
-      id,
-      name: payload.name,
-      email: payload.email,
+    const newOwner: OwnerRecord = {
+      id: ownerId,
+      name: payload.owner.name,
+      email: payload.owner.email,
       hash,
       salt,
-      pet_name: payload.petName,
-      pet_type: payload.petType,
-      pet_breed: payload.petBreed,
-      pet_age: payload.petAge,
-      pet_weight: payload.petWeight,
     };
 
-    return this.authRepository.createUser(newUser);
+    const newAnimal = {
+      name: payload.animal.name,
+      type: payload.animal.type,
+      breed: payload.animal.breed,
+      age: payload.animal.age,
+      weight: payload.animal.weight,
+    };
+
+    return this.authRepository.createOwnerAndAnimal(newOwner, newAnimal);
   }
 
   public async validateUser(email: string, password: string) {
-    const user = await this.authRepository.findUserByEmail(email);
-    if (!user) {
+    const owner = await this.authRepository.findOwnerByEmail(email);
+    if (!owner) {
       return "User not found";
     }
 
-    const calculatedHash = this.hashPassword(password, user.salt);
-    if (calculatedHash === user.hash) {
-      const { hash, salt, ...userResult } = user;
-      return userResult;
+    const calculatedHash = this.hashPassword(password, owner.salt);
+    if (calculatedHash === owner.hash) {
+      const { hash, salt, ...ownerResult } = owner;
+      return ownerResult; // todo Return owner data without hash and salt
     }
 
     return "Invalid password";
   }
 
   public async findUserById(id: string) {
-    const user = await this.authRepository.findUserById(id);
-    if (!user) return null;
-    const { hash, salt, ...userResult } = user;
-    return userResult;
+    const owner = await this.authRepository.findOwnerById(id);
+    if (!owner) return null;
+    const { hash, salt, ...ownerResult } = owner;
+    return ownerResult;
   }
 
   public async findUserByEmail(email: string) {
-    const user = await this.authRepository.findUserByEmail(email);
-    if (!user) return null;
-    const { hash, salt, ...userResult } = user;
-    return userResult;
+    const owner = await this.authRepository.findOwnerByEmail(email);
+    if (!owner) return null;
+    const { hash, salt, ...ownerResult } = owner;
+    return ownerResult;
   }
 
   public async resetPassword(
     userId: string,
     newPassword: string
   ): Promise<string> {
-    const user = await this.authRepository.findUserById(userId);
-    if (!user) {
+    const owner = await this.authRepository.findOwnerById(userId);
+    if (!owner) {
       return "User not found";
     }
 

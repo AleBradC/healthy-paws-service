@@ -1,17 +1,25 @@
 -- CREATE DATABASE healthyPaws;
  
-CREATE TABLE users (
+CREATE TABLE owners (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    hash VARCHAR(128) NOT NULL,
-    salt VARCHAR(32) NOT NULL,
-    pet_name VARCHAR(255) NOT NULL,
-    pet_type VARCHAR(50) NOT NULL,
-    pet_breed VARCHAR(100) NOT NULL,
-    pet_age INT NOT NULL,
-    pet_weight NUMERIC(5, 2) NOT NULL,
+    hash VARCHAR(255) NOT NULL,
+    salt VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE animals (
+    id UUID PRIMARY KEY,
+    owner_id UUID NOT NULL REFERENCES owners(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(100) NOT NULL,
+    breed VARCHAR(100) NOT NULL,
+    age INT NOT NULL,
+    weight NUMERIC(5, 2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- DROP TABLE users;
