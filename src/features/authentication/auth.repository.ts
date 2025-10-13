@@ -1,10 +1,22 @@
 import { Pool, QueryResult } from "pg";
+import { UserRecord, DoctorPayload, AnimalPayload } from "./types";
+import { ROLES } from "./constants";
 
-interface UserRecord {
-  id: string;
+interface CreateOwnerArgs {
   email: string;
   hash: string;
   salt: string;
+  role: ROLES.OWNER_ROLE;
+  ownerName: string;
+  animalData: AnimalPayload;
+}
+
+interface CreateDoctorArgs {
+  email: string;
+  hash: string;
+  salt: string;
+  role: ROLES.DOCTOR_ROLE;
+  doctorData: DoctorPayload;
 }
 
 export class AuthRepository {
@@ -30,17 +42,93 @@ export class AuthRepository {
     return result.rows[0] || null;
   }
 
-  public async createUser(
-    id: string,
-    email: string,
-    hash: string,
-    salt: string
+  public async createOwnerAndAnimal(
+    args: CreateOwnerArgs
   ): Promise<{ id: string; email: string }> {
-    const result = await this.db.query(
-      "INSERT INTO users (id, email, hash, salt) VALUES ($1, $2, $3, $4) RETURNING id, email",
-      [id, email, hash, salt]
-    );
-    return result.rows[0];
+    const { email, hash, salt, role, ownerName, animalData } = args;
+    const client = await this.db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const userResult = await client.query(
+        "INSERT INTO users (email, hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
+        [email, hash, salt, role]
+      );
+      const newUser = userResult.rows[0];
+
+      const ownerResult = await client.query(
+        "INSERT INTO owners (user_id, name) VALUES ($1, $2) RETURNING id",
+        [newUser.id, ownerName]
+      );
+      const newOwnerProfile = ownerResult.rows[0];
+
+      await client.query(
+        "INSERT INTO animals (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
+        [
+          newOwnerProfile.id,
+          animalData.name,
+          animalData.type,
+          animalData.breed,
+          animalData.age,
+          animalData.weight,
+        ]
+      );
+
+      await client.query("COMMIT");
+      return { id: newUser.id, email: newUser.email };
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async createDoctor(
+    args: CreateDoctorArgs
+  ): Promise<{ id: string; email: string }> {
+    const { email, hash, salt, role, doctorData } = args;
+    const client = await this.db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const userResult = await client.query(
+        "INSERT INTO users (email, hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
+        [email, hash, salt, role]
+      );
+      const newUser = userResult.rows[0];
+
+      const doctorResult = await client.query(
+        "INSERT INTO doctors (user_id, name, specialization, clinic_name, clinic_address) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+        [
+          newUser.id,
+          doctorData.name,
+          doctorData.specialty,
+          doctorData.clinic,
+          doctorData.address,
+        ]
+      );
+      const newDoctorProfile = doctorResult.rows[0];
+
+      if (doctorData.services && doctorData.services.length > 0) {
+        for (const service of doctorData.services) {
+          await client.query(
+            "INSERT INTO doctor_services (doctor_id, service_name, price) VALUES ($1, $2, $3)",
+            [newDoctorProfile.id, service.service, service.price]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      return { id: newUser.id, email: newUser.email };
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   public async updateUserPassword(
