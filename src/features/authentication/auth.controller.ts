@@ -58,8 +58,31 @@ export class AuthController {
     }
   };
 
-  public login = (req: Request, res: Response) => {
-    res.status(200).json({ message: "Logged in successfully", user: req.user });
+  public login = async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ message: "Email and password are required." });
+      }
+
+      const result = await this.authService.loginUser(email, password);
+
+      if (!result) {
+        return res.status(401).json({ message: "Invalid credentials." });
+      }
+
+      res.status(200).json({
+        message: "Logged in successfully",
+        accessToken: result.token,
+        user: result.user,
+      });
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      res.status(500).json({ message: "An internal server error occurred." });
+    }
   };
 
   public logout = (req: Request, res: Response) => {

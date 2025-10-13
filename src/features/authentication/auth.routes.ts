@@ -12,7 +12,7 @@ const authService = new AuthenticationService(authRepository);
 const authController = new AuthController(authService);
 
 router.post("/register", authController.register);
-router.post("/login", passport.authenticate("local"), authController.login);
+router.post("/login", authController.login);
 router.post("/logout", authController.logout);
 router.post("/reset-password/:token", authController.resetPassword);
 

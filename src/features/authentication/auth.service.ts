@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository";
 import {
   RegisterOwnerPayload,
@@ -62,6 +62,39 @@ export class AuthenticationService {
     });
   }
 
+  generateAccessToken(payload: any): string {
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined in environment variables.");
+    }
+
+    return jwt.sign(payload, secret, { expiresIn: "1h" });
+  }
+
+  public async loginUser(
+    email: string,
+    password: string
+  ): Promise<{
+    token: string;
+    user: Pick<UserRecord, "id" | "email" | "role">;
+  } | null> {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) {
+      return null;
+    }
+
+    const calculatedHash = this.hashPassword(password, user.salt);
+
+    if (calculatedHash === user.hash) {
+      const userPayload = { id: user.id, email: user.email, role: user.role };
+      const token = this.generateAccessToken(userPayload);
+      return { token, user: userPayload };
+    }
+
+    return null;
+  }
+
   public async validateUser(
     email: string,
     password: string
@@ -75,15 +108,6 @@ export class AuthenticationService {
     }
 
     return null;
-  }
-
-  public generateAccessToken(user: { id: string; role: string }): string {
-    const payload = { userId: user.id, role: user.role };
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("JWT_SECRET is not defined in environment variables.");
-    }
-    return jwt.sign(payload, secret, { expiresIn: "1h" });
   }
 
   public async findUserById(id: string) {
