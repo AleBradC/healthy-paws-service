@@ -2,8 +2,11 @@ import express from "express";
 import * as dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
-import authRoutes from "./features/authentication/auth.routes";
 import pool from "./core/config/db";
+import { passport } from "./core/middleware/passport-config";
+
+import authRoutes from "./features/authentication/auth.routes";
+import doctorRoutes from "./features/doctor/doctor.routes";
 
 dotenv.config();
 
@@ -13,8 +16,10 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
+app.use("/api", doctorRoutes);
 
 const startServer = async () => {
   try {

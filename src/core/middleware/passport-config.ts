@@ -1,21 +1,31 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import {
+  Strategy as JwtStrategy,
+  ExtractJwt,
+  type StrategyOptions,
+  type VerifiedCallback,
+} from "passport-jwt";
 import { AuthRepository } from "../../features/authentication/auth.repository";
 import { AuthenticationService } from "../../features/authentication/auth.service";
 import pool from "../config/db";
 
-// 1. Create instances of the layers, which will be used by Passport.
-// This is the composition root for Passport's dependencies.
+interface JwtPayload {
+  id: string;
+  email: string;
+  role: "doctor" | "owner";
+  iat?: number;
+  exp?: number;
+}
+
 const authRepository = new AuthRepository(pool);
 const authService = new AuthenticationService(authRepository);
 
-// 2. Configure the Passport LocalStrategy
 passport.use(
   new LocalStrategy(
     { usernameField: "email" },
     async (email, password, done) => {
       try {
-        // The strategy now uses the authService instance
         const user = await authService.validateUser(email, password);
         if (!user) {
           return done(null, false, { message: "Invalid email or password." });
@@ -28,22 +38,32 @@ passport.use(
   )
 );
 
-// 3. Configure user serialization for sessions
-// This tells Passport how to store the user in the session
-passport.serializeUser((user: any, done) => {
-  done(null, user.id);
-});
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not defined in environment variables.");
+}
 
-// 4. Configure user deserialization for sessions
-// This tells Passport how to retrieve the user from the session on subsequent requests
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const user = await authService.findUserById(id);
-    done(null, user);
-  } catch (err) {
-    done(err);
-  }
-});
+const jwtOptions: StrategyOptions = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: JWT_SECRET,
+};
 
-// 5. Export only the configured passport instance
+passport.use(
+  new JwtStrategy(
+    jwtOptions,
+    async (jwt_payload: JwtPayload, done: VerifiedCallback) => {
+      try {
+        const user = await authService.findUserById(jwt_payload.id);
+        if (user) {
+          return done(null, user);
+        } else {
+          return done(null, false);
+        }
+      } catch (err) {
+        return done(err, false);
+      }
+    }
+  )
+);
+
 export { passport };

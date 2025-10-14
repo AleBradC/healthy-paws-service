@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { passport } from "../../core/middleware/passport-config";
 import { AuthRepository } from "./auth.repository";
 import { AuthenticationService } from "./auth.service";
 import { AuthController } from "./auth.controller";

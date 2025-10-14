@@ -1,7 +1,14 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { AuthenticationService } from "./auth.service";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "./types";
 import { ROLES } from "./constants";
+import passport from "passport";
+
+interface User {
+  id: string;
+  email: string;
+  role: "doctor" | "owner";
+}
 
 const passwordResetTokens: {
   [token: string]: { userId: string; expires: number };
@@ -58,40 +65,34 @@ export class AuthController {
     }
   };
 
-  public login = async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
+  public login = (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate(
+      "local",
+      { session: false },
+      (err: Error | null, user: User | false, info: { message: string }) => {
+        if (err) {
+          return next(err);
+        }
+        if (!user) {
+          return res
+            .status(401)
+            .json({ message: info?.message || "Invalid credentials." });
+        }
 
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: "Email and password are required." });
+        const payload = { id: user.id, email: user.email, role: user.role };
+        const token = this.authService.generateAccessToken(payload);
+
+        return res.json({
+          message: "Logged in successfully",
+          accessToken: token,
+          user: payload,
+        });
       }
-
-      const result = await this.authService.loginUser(email, password);
-
-      if (!result) {
-        return res.status(401).json({ message: "Invalid credentials." });
-      }
-
-      res.status(200).json({
-        message: "Logged in successfully",
-        accessToken: result.token,
-        user: result.user,
-      });
-    } catch (error: any) {
-      console.error("Login Error:", error);
-      res.status(500).json({ message: "An internal server error occurred." });
-    }
+    )(req, res, next);
   };
 
   public logout = (req: Request, res: Response) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Error logging out." });
-      }
-      res.status(200).json({ message: "Logged out successfully." });
-    });
+    res.status(200).json({ message: "Logged out successfully." });
   };
 
   public resetPassword = async (req: Request, res: Response) => {
