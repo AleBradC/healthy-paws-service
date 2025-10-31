@@ -1,81 +1,93 @@
-// --- PAYLOAD TYPES (Data sent from Frontend to Backend) ---
+import { ROLES } from "./constants";
+
+// --- PAYLOAD TYPES  ---
 export interface OwnerPayload {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string; // Used for validation, not stored in DB
+  confirmPassword: string;
 }
-export interface AnimalPayload {
+
+export interface PetPayload {
   name: string;
   type: string;
   breed: string;
   age: number;
   weight: number;
 }
+
 export interface RegisterOwnerPayload {
   owner: OwnerPayload;
-  animal: AnimalPayload;
+  pet: PetPayload;
 }
+
+export interface DoctorServicePayload {
+  name: string;
+  price: number;
+}
+
 export interface DoctorPayload {
   name: string;
   email: string;
   password: string;
-  specialty: string;
-  clinic: string;
-  address: string;
-  services: {
-    service: string;
-    price: number;
-  }[];
+  confirmPassword: string;
+  specializationName: string;
+  clinicName: string;
+  clinicAddress: string;
+  services: DoctorServicePayload[];
 }
+
 export interface RegisterDoctorPayload {
   doctor: DoctorPayload;
 }
 
 // API
 export interface UnifiedRegisterPayload {
-  role: "owner" | "doctor";
+  role: ROLES;
   owner?: OwnerPayload;
-  animal?: AnimalPayload;
+  pet?: PetPayload;
   doctor?: DoctorPayload;
 }
 
-// --- DATABASE RECORD TYPES (Represents data structure in your PostgreSQL database) ---
+// --- DATABASE RECORD TYPES ---
 
 export interface UserRecord {
-  id: string; // UUID
+  id: string;
+  email: string;
+  password_hash: string;
+  password_salt: string;
+  role: ROLES;
+}
+
+// --- REPOSITORY METHOD ARGUMENT TYPES ---
+
+export interface CreateOwnerArgs {
   email: string;
   hash: string;
   salt: string;
-  role: "owner" | "doctor";
-  created_at?: Date;
+  role: ROLES.OWNER_ROLE;
+  ownerName: string;
+  petData: PetPayload;
 }
 
-export interface OwnerRecord {
-  id: string; // UUID
-  user_id: string; // Foreign Key to 'users' table
-  name: string;
-  created_at?: Date;
+export interface CreateDoctorArgs {
+  email: string;
+  hash: string;
+  salt: string;
+  role: ROLES.DOCTOR_ROLE;
+  doctorData: DoctorPayload;
 }
 
-export interface DoctorRecord {
-  id: string; // UUID
-  user_id: string; // Foreign Key to 'users' table
-  name: string;
-  specialization: string;
-  clinic_name: string;
-  clinic_address: string;
-  image_url?: string;
-  created_at?: Date;
+export interface User {
+  id: string;
+  email: string;
+  role: ROLES;
 }
 
-export interface AnimalRecord {
-  id: string; // UUID
-  owner_id: string; // Foreign Key to 'owners' table
-  name: string;
-  type: string;
-  breed: string;
-  age: number;
-  weight: number;
-  created_at?: Date;
+export interface JwtPayload {
+  id: string;
+  email: string;
+  role: ROLES;
+  iat?: number;
+  exp?: number;
 }

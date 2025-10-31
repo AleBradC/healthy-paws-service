@@ -1,23 +1,5 @@
 import { Pool, QueryResult } from "pg";
-import { UserRecord, DoctorPayload, AnimalPayload } from "./types";
-import { ROLES } from "./constants";
-
-interface CreateOwnerArgs {
-  email: string;
-  hash: string;
-  salt: string;
-  role: ROLES.OWNER_ROLE;
-  ownerName: string;
-  animalData: AnimalPayload;
-}
-
-interface CreateDoctorArgs {
-  email: string;
-  hash: string;
-  salt: string;
-  role: ROLES.DOCTOR_ROLE;
-  doctorData: DoctorPayload;
-}
+import { UserRecord, CreateDoctorArgs, CreateOwnerArgs } from "./types";
 
 export class AuthRepository {
   private db: Pool;
@@ -28,7 +10,7 @@ export class AuthRepository {
 
   public async findUserByEmail(email: string): Promise<UserRecord | null> {
     const result: QueryResult<UserRecord> = await this.db.query(
-      "SELECT * FROM users WHERE email = $1",
+      "SELECT * FROM Users WHERE email = $1",
       [email]
     );
     return result.rows[0] || null;
@@ -36,52 +18,52 @@ export class AuthRepository {
 
   public async findUserById(id: string): Promise<UserRecord | null> {
     const result: QueryResult<UserRecord> = await this.db.query(
-      "SELECT * FROM users WHERE id = $1",
+      "SELECT * FROM Users WHERE id = $1",
       [id]
     );
     return result.rows[0] || null;
   }
 
-  public async createOwnerAndAnimal(
+  public async createOwnerAndPet(
     args: CreateOwnerArgs
   ): Promise<{ id: string; email: string }> {
-    const { email, hash, salt, role, ownerName, animalData } = args;
-    const client = await this.db.connect();
+    const { email, hash, salt, role, ownerName, petData } = args;
+    const dataBase = await this.db.connect();
 
     try {
-      await client.query("BEGIN");
+      await dataBase.query("BEGIN");
 
-      const userResult = await client.query(
-        "INSERT INTO users (email, hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
+      const userResult = await dataBase.query(
+        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
         [email, hash, salt, role]
       );
       const newUser = userResult.rows[0];
 
-      const ownerResult = await client.query(
-        "INSERT INTO owners (user_id, name) VALUES ($1, $2) RETURNING id",
+      const ownerResult = await dataBase.query(
+        "INSERT INTO Owners (user_id, name) VALUES ($1, $2) RETURNING id",
         [newUser.id, ownerName]
       );
-      const newOwnerProfile = ownerResult.rows[0];
+      const newOwner = ownerResult.rows[0];
 
-      await client.query(
-        "INSERT INTO animals (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
+      await dataBase.query(
+        "INSERT INTO Pets (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
         [
-          newOwnerProfile.id,
-          animalData.name,
-          animalData.type,
-          animalData.breed,
-          animalData.age,
-          animalData.weight,
+          newOwner.id,
+          petData.name,
+          petData.type,
+          petData.breed,
+          petData.age,
+          petData.weight,
         ]
       );
 
-      await client.query("COMMIT");
+      await dataBase.query("COMMIT");
       return { id: newUser.id, email: newUser.email };
     } catch (e) {
-      await client.query("ROLLBACK");
+      await dataBase.query("ROLLBACK");
       throw e;
     } finally {
-      client.release();
+      dataBase.release();
     }
   }
 
@@ -89,45 +71,70 @@ export class AuthRepository {
     args: CreateDoctorArgs
   ): Promise<{ id: string; email: string }> {
     const { email, hash, salt, role, doctorData } = args;
-    const client = await this.db.connect();
+    const dataBase = await this.db.connect();
 
     try {
-      await client.query("BEGIN");
+      await dataBase.query("BEGIN");
 
-      const userResult = await client.query(
-        "INSERT INTO users (email, hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
+      const userResult = await dataBase.query(
+        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
         [email, hash, salt, role]
       );
       const newUser = userResult.rows[0];
 
-      const doctorResult = await client.query(
-        "INSERT INTO doctors (user_id, name, specialization, clinic_name, clinic_address) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      const doctorResult = await dataBase.query(
+        "INSERT INTO Doctors (user_id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4) RETURNING id",
         [
           newUser.id,
           doctorData.name,
-          doctorData.specialty,
-          doctorData.clinic,
-          doctorData.address,
+          doctorData.clinicName,
+          doctorData.clinicAddress,
         ]
       );
-      const newDoctorProfile = doctorResult.rows[0];
+      const newDoctor = doctorResult.rows[0];
 
+      // find or Create the Specialization
+      const specializationResult = await dataBase.query(
+        `INSERT INTO Specializations (name) VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id`,
+        [doctorData.specializationName]
+      );
+      const specializationId = specializationResult.rows[0].id;
+
+      // link Doctor to Specialization
+      await dataBase.query(
+        "INSERT INTO Doctor_Specializations (doctor_id, specialization_id) VALUES ($1, $2)",
+        [newDoctor.id, specializationId]
+      );
+
+      // loop through services to find/create and link them
       if (doctorData.services && doctorData.services.length > 0) {
         for (const service of doctorData.services) {
-          await client.query(
-            "INSERT INTO doctor_services (doctor_id, service_name, price) VALUES ($1, $2, $3)",
-            [newDoctorProfile.id, service.service, service.price]
+          // find or create the service under the specialization
+          const serviceResult = await dataBase.query(
+            `INSERT INTO Services (name, specialization_id) VALUES ($1, $2)
+             ON CONFLICT (name, specialization_id) DO UPDATE SET name = EXCLUDED.name
+             RETURNING id`,
+            [service.name, specializationId]
+          );
+          const serviceId = serviceResult.rows[0].id;
+
+          // link the service to the doctor with a price
+          await dataBase.query(
+            "INSERT INTO Doctor_Services (doctor_id, service_id, price) VALUES ($1, $2, $3)",
+            [newDoctor.id, serviceId, service.price]
           );
         }
       }
 
-      await client.query("COMMIT");
+      await dataBase.query("COMMIT");
       return { id: newUser.id, email: newUser.email };
     } catch (e) {
-      await client.query("ROLLBACK");
+      await dataBase.query("ROLLBACK");
       throw e;
     } finally {
-      client.release();
+      dataBase.release();
     }
   }
 
@@ -136,10 +143,9 @@ export class AuthRepository {
     hash: string,
     salt: string
   ): Promise<void> {
-    await this.db.query("UPDATE users SET hash = $1, salt = $2 WHERE id = $3", [
-      hash,
-      salt,
-      userId,
-    ]);
+    await this.db.query(
+      "UPDATE Users SET password_hash = $1, password_salt = $2 WHERE id = $3",
+      [hash, salt, userId]
+    );
   }
 }

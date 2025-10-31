@@ -23,9 +23,9 @@ app.use("/api", doctorRoutes);
 
 const startServer = async () => {
   try {
-    const client = await pool.connect();
+    const dataBase = await pool.connect();
     console.log("Successfully connected to the database.");
-    client.release();
+    dataBase.release();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
@@ -37,5 +37,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-export default app;

@@ -1,18 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { AuthenticationService } from "./auth.service";
-import { RegisterDoctorPayload, RegisterOwnerPayload } from "./types";
-import { ROLES } from "./constants";
+import { RegisterDoctorPayload, RegisterOwnerPayload, User } from "./types";
+import { passwordResetTokens, ROLES } from "./constants";
 import passport from "passport";
-
-interface User {
-  id: string;
-  email: string;
-  role: "doctor" | "owner";
-}
-
-const passwordResetTokens: {
-  [token: string]: { userId: string; expires: number };
-} = {};
 
 export class AuthController {
   private authService: AuthenticationService;
@@ -22,16 +12,17 @@ export class AuthController {
   }
 
   public register = async (req: Request, res: Response) => {
-    const { role, owner, animal, doctor } = req.body;
+    const { role, owner, pet, doctor } = req.body;
 
     try {
       if (role === ROLES.OWNER_ROLE) {
-        if (!owner || !animal) {
+        if (!owner || !pet) {
           return res
             .status(400)
             .json({ message: "Owner and animal details are required." });
         }
-        const payload: RegisterOwnerPayload = { owner, animal };
+
+        const payload: RegisterOwnerPayload = { owner, pet };
         const newOwner = await this.authService.registerOwner(payload);
         return res.status(201).json({
           message: "Pet owner registered successfully.",
@@ -43,6 +34,7 @@ export class AuthController {
             .status(400)
             .json({ message: "Doctor details are required." });
         }
+
         const payload: RegisterDoctorPayload = { doctor };
         const newDoctor = await this.authService.registerDoctor(payload);
         return res.status(201).json({

@@ -32,13 +32,13 @@ export class AuthenticationService {
     const salt = crypto.randomBytes(16).toString("hex");
     const hash = this.hashPassword(payload.owner.password, salt);
 
-    return this.authRepository.createOwnerAndAnimal({
+    return this.authRepository.createOwnerAndPet({
       email: payload.owner.email,
       hash,
       salt,
       role: ROLES.OWNER_ROLE,
       ownerName: payload.owner.name,
-      animalData: payload.animal,
+      petData: payload.pet,
     });
   }
 
@@ -62,37 +62,12 @@ export class AuthenticationService {
     });
   }
 
-  generateAccessToken(payload: any): string {
+  public generateAccessToken(payload: any): string {
     const secret = process.env.JWT_SECRET;
-
     if (!secret) {
       throw new Error("JWT_SECRET is not defined in environment variables.");
     }
-
     return jwt.sign(payload, secret, { expiresIn: "1h" });
-  }
-
-  public async loginUser(
-    email: string,
-    password: string
-  ): Promise<{
-    token: string;
-    user: Pick<UserRecord, "id" | "email" | "role">;
-  } | null> {
-    const user = await this.authRepository.findUserByEmail(email);
-    if (!user) {
-      return null;
-    }
-
-    const calculatedHash = this.hashPassword(password, user.salt);
-
-    if (calculatedHash === user.hash) {
-      const userPayload = { id: user.id, email: user.email, role: user.role };
-      const token = this.generateAccessToken(userPayload);
-      return { token, user: userPayload };
-    }
-
-    return null;
   }
 
   public async validateUser(
@@ -102,8 +77,8 @@ export class AuthenticationService {
     const user = await this.authRepository.findUserByEmail(email);
     if (!user) return null;
 
-    const calculatedHash = this.hashPassword(password, user.salt);
-    if (calculatedHash === user.hash) {
+    const calculatedHash = this.hashPassword(password, user.password_salt);
+    if (calculatedHash === user.password_hash) {
       return { id: user.id, email: user.email, role: user.role };
     }
 
@@ -113,7 +88,7 @@ export class AuthenticationService {
   public async findUserById(id: string) {
     const user = await this.authRepository.findUserById(id);
     if (!user) return null;
-    const { hash, salt, ...userResult } = user;
+    const { password_hash, password_salt, ...userResult } = user;
     return userResult;
   }
 

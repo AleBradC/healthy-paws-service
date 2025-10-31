@@ -1,10 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import passport from "passport";
 
-// The main authentication middleware
 export const requireAuth = passport.authenticate("jwt", { session: false });
 
-// The role-based authorization middleware
 export const requireRole = (roles: string | string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

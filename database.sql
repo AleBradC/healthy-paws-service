@@ -1,49 +1,100 @@
 CREATE DATABASE healthyPaws;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE users (
+CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) NOT NULL UNIQUE,
-    hash VARCHAR(255) NOT NULL,
-    salt VARCHAR(64) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'doctor')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    password_hash TEXT NOT NULL,
+    password_salt TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor'))
+    -- to do add here image url ? 
 );
 
-CREATE TABLE doctors (
+CREATE TABLE Owners (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Doctors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    specialization VARCHAR(255),
     clinic_name VARCHAR(255),
-    clinic_address VARCHAR(255),
-    image_url TEXT, -- To store the profile image URL
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    clinic_address VARCHAR(255)
 );
 
-CREATE TABLE doctor_services (
+CREATE TABLE Specializations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    doctor_id UUID NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-    service_name VARCHAR(255) NOT NULL,
-    price NUMERIC(10, 2) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    name VARCHAR(255) NOT NULL UNIQUE
 );
 
-CREATE TABLE owners (
+CREATE TABLE Services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE animals (
+CREATE TABLE Pets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_id UUID NOT NULL REFERENCES owners(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES Owners(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(100) NOT NULL,
     breed VARCHAR(100) NOT NULL,
     age INT NOT NULL,
-    weight NUMERIC(5, 2) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    weight DECIMAL(5, 2) NOT NULL
 );
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE Health_Records_Lifelong (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
+    condition TEXT NOT NULL,
+    treatment TEXT NOT NULL
+)
+
+CREATE TABLE Health_Records_Active (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
+    condition TEXT NOT NULL,
+    treatment TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE
+);
+
+CREATE TABLE Availabilities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
+    available_datetime TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE Appointments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
+    doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
+    appointment_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    reason TEXT,
+    consultation_type TEXT,
+    investigation TEXT,
+    investigation_result TEXT
+    -- todo add key for no duplication -> doctor & date
+);
+
+-- Junction Tables (Many-to-Many Relationships)
+CREATE TABLE Doctor_Specializations (
+    doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
+    specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
+    PRIMARY KEY (doctor_id, specialization_id)
+);
+
+CREATE TABLE Doctor_Services (
+    doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES Services(id) ON DELETE CASCADE,
+    price DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (doctor_id, service_id)
+);
+
+
+-- SELECT id, name FROM Specializations;
+-- ALTER TABLE Services
+-- ADD CONSTRAINT services_name_specialization_id_key UNIQUE (name, specialization_id);

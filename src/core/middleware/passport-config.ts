@@ -9,14 +9,7 @@ import {
 import { AuthRepository } from "../../features/authentication/auth.repository";
 import { AuthenticationService } from "../../features/authentication/auth.service";
 import pool from "../config/db";
-
-interface JwtPayload {
-  id: string;
-  email: string;
-  role: "doctor" | "owner";
-  iat?: number;
-  exp?: number;
-}
+import { JwtPayload } from "jsonwebtoken";
 
 const authRepository = new AuthRepository(pool);
 const authService = new AuthenticationService(authRepository);
