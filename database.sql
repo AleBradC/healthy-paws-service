@@ -98,3 +98,6 @@ CREATE TABLE Doctor_Services (
 -- SELECT id, name FROM Specializations;
 -- ALTER TABLE Services
 -- ADD CONSTRAINT services_name_specialization_id_key UNIQUE (name, specialization_id);
+
+-- ALTER TABLE Availabilities
+-- ADD CONSTRAINT unq_doctor_availability UNIQUE (doctor_id, available_datetime);
