@@ -37,10 +37,6 @@ export class AuthenticationController {
     )(req, res, next);
   };
 
-  public logout = (req: Request, res: Response) => {
-    res.status(200).json({ message: "Logged out successfully." });
-  };
-
   public resetPassword = async (req: Request, res: Response) => {
     const { token } = req.params;
     const { newPassword } = req.body;
