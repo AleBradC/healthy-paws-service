@@ -6,20 +6,22 @@ import {
   type StrategyOptions,
   type VerifiedCallback,
 } from "passport-jwt";
-import { AuthRepository } from "../../features/authentication/auth.repository";
-import { AuthenticationService } from "../../features/authentication/auth.service";
-import pool from "../config/db";
 import { JwtPayload } from "jsonwebtoken";
+import pool from "../config/db";
+import { AuthenticationService } from "../../features/authentication/authentication.service";
+import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
 
-const authRepository = new AuthRepository(pool);
-const authService = new AuthenticationService(authRepository);
+const authenticationRepository = new AuthenticationRepository(pool);
+const authenticationService = new AuthenticationService(
+  authenticationRepository
+);
 
 passport.use(
   new LocalStrategy(
     { usernameField: "email" },
     async (email, password, done) => {
       try {
-        const user = await authService.validateUser(email, password);
+        const user = await authenticationService.validateUser(email, password);
         if (!user) {
           return done(null, false, { message: "Invalid email or password." });
         }
@@ -46,7 +48,7 @@ passport.use(
     jwtOptions,
     async (jwt_payload: JwtPayload, done: VerifiedCallback) => {
       try {
-        const user = await authService.findUserById(jwt_payload.id);
+        const user = await authenticationService.findUserById(jwt_payload.id);
         if (user) {
           return done(null, user);
         } else {

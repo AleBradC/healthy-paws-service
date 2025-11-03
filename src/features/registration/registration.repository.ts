@@ -1,7 +1,7 @@
 import { Pool, QueryResult } from "pg";
-import { UserRecord, CreateDoctorArgs, CreateOwnerArgs } from "./types";
+import { UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
 
-export class AuthRepository {
+export class RegistrationRepository {
   private db: Pool;
 
   constructor(dbPool: Pool) {
@@ -136,16 +136,5 @@ export class AuthRepository {
     } finally {
       dataBase.release();
     }
-  }
-
-  public async updateUserPassword(
-    userId: string,
-    hash: string,
-    salt: string
-  ): Promise<void> {
-    await this.db.query(
-      "UPDATE Users SET password_hash = $1, password_salt = $2 WHERE id = $3",
-      [hash, salt, userId]
-    );
   }
 }

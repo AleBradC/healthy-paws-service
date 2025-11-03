@@ -4,9 +4,8 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import pool from "./core/config/db";
 import { passport } from "./core/middleware/passport-config";
-
-import authRoutes from "./features/authentication/auth.routes";
-import doctorRoutes from "./features/doctor/doctor.routes";
+import authenticationRoutes from "./features/authentication/authentication.routes";
+import registrationRoutes from "./features/registration/registration.routes";
 
 dotenv.config();
 
@@ -18,8 +17,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
-app.use("/api/auth", authRoutes);
-app.use("/api", doctorRoutes);
+app.use("/api/auth", authenticationRoutes);
+app.use("/api/auth", registrationRoutes);
 
 const startServer = async () => {
   try {
