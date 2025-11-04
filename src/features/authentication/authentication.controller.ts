@@ -15,7 +15,11 @@ export class AuthenticationController {
     passport.authenticate(
       "local",
       { session: false },
-      (err: Error | null, user: User | false, info: { message: string }) => {
+      async (
+        err: Error | null,
+        user: User | false,
+        info: { message: string }
+      ) => {
         if (err) {
           return next(err);
         }
@@ -25,14 +29,37 @@ export class AuthenticationController {
             .json({ message: info?.message || "Invalid credentials." });
         }
 
-        const payload = { id: user.id, email: user.email, role: user.role };
-        const token = this.authenticationService.generateAccessToken(payload);
+        try {
+          let ownerOrDoctorId = user.id;
 
-        return res.json({
-          message: "Logged in successfully",
-          accessToken: token,
-          role: user.role,
-        });
+          if (user.role === "owner") {
+            const ownerId =
+              await this.authenticationService.findOwnerIdByUserId(user.id);
+            if (ownerId) {
+              ownerOrDoctorId = ownerId;
+            } else {
+              return res
+                .status(500)
+                .json({ message: "User profile not found." });
+            }
+          }
+
+          const payload = {
+            id: ownerOrDoctorId,
+            email: user.email,
+            role: user.role,
+          };
+          const token = this.authenticationService.generateAccessToken(payload);
+
+          return res.json({
+            message: "Logged in successfully",
+            accessToken: token,
+            role: user.role,
+            id: ownerOrDoctorId,
+          });
+        } catch (error) {
+          return next(error);
+        }
       }
     )(req, res, next);
   };

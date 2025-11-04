@@ -2,7 +2,7 @@ import * as crypto from "crypto";
 import { RegistrationRepository } from "./registration.repository";
 import { ROLES } from "../../constants";
 import { hashPassword } from "../../helpers";
-import { RegisterOwnerPayload, RegisterDoctorPayload } from "../../types";
+import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 
 export class RegistrationService {
   private registrationRepository: RegistrationRepository;
@@ -20,7 +20,7 @@ export class RegistrationService {
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
-    const hash = hashPassword(payload.owner.password, salt);
+    const hash = hashPassword(payload.owner.password!, salt);
 
     return this.registrationRepository.createOwnerAndPet({
       email: payload.owner.email,
@@ -41,9 +41,9 @@ export class RegistrationService {
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
-    const hash = hashPassword(payload.doctor.password, salt);
+    const hash = hashPassword(payload.doctor.password!, salt);
 
-    return this.registrationRepository.createDoctor({
+    return this.registrationRepository.createDoctorWithDetails({
       email: payload.doctor.email,
       hash,
       salt,

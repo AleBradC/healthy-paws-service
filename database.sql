@@ -1,13 +1,14 @@
-CREATE DATABASE healthyPaws;
+CREATE DATABASE healthyPaws; 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Core entity tables for users and their roles
 CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     password_salt TEXT NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor'))
-    -- to do add here image url ? 
+    role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor')),
+    image_url TEXT
 );
 
 CREATE TABLE Owners (
@@ -24,6 +25,7 @@ CREATE TABLE Doctors (
     clinic_address VARCHAR(255)
 );
 
+-- Core entities for medical information
 CREATE TABLE Specializations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL UNIQUE
@@ -31,10 +33,10 @@ CREATE TABLE Specializations (
 
 CREATE TABLE Services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL UNIQUE,
 );
 
+-- Core entity for pets
 CREATE TABLE Pets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID NOT NULL REFERENCES Owners(id) ON DELETE CASCADE,
@@ -45,12 +47,13 @@ CREATE TABLE Pets (
     weight DECIMAL(5, 2) NOT NULL
 );
 
+-- Health record tables
 CREATE TABLE Health_Records_Lifelong (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
     condition TEXT NOT NULL,
     treatment TEXT NOT NULL
-)
+);
 
 CREATE TABLE Health_Records_Active (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -61,10 +64,12 @@ CREATE TABLE Health_Records_Active (
     end_date DATE
 );
 
+-- Scheduling tables
 CREATE TABLE Availabilities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
-    available_datetime TIMESTAMP WITH TIME ZONE NOT NULL
+    available_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT unq_doctor_availability UNIQUE (doctor_id, available_datetime)
 );
 
 CREATE TABLE Appointments (
@@ -76,15 +81,21 @@ CREATE TABLE Appointments (
     reason TEXT,
     consultation_type TEXT,
     investigation TEXT,
-    investigation_result TEXT
-    -- todo add key for no duplication -> doctor & date
+    investigation_result TEXT,
+    CONSTRAINT unq_doctor_appointment UNIQUE (doctor_id, appointment_datetime)
 );
 
--- Junction Tables (Many-to-Many Relationships)
+-- Junction tables for many-to-many relationships
 CREATE TABLE Doctor_Specializations (
     doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
     specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
     PRIMARY KEY (doctor_id, specialization_id)
+);
+
+CREATE TABLE Specialization_Services (
+    specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES Services(id) ON DELETE CASCADE,
+    PRIMARY KEY (specialization_id, service_id)
 );
 
 CREATE TABLE Doctor_Services (
@@ -94,10 +105,3 @@ CREATE TABLE Doctor_Services (
     PRIMARY KEY (doctor_id, service_id)
 );
 
-
--- SELECT id, name FROM Specializations;
--- ALTER TABLE Services
--- ADD CONSTRAINT services_name_specialization_id_key UNIQUE (name, specialization_id);
-
--- ALTER TABLE Availabilities
--- ADD CONSTRAINT unq_doctor_availability UNIQUE (doctor_id, available_datetime);

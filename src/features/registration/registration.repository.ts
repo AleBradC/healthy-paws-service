@@ -67,74 +67,79 @@ export class RegistrationRepository {
     }
   }
 
-  public async createDoctor(
+  public async createDoctorWithDetails(
     args: CreateDoctorArgs
   ): Promise<{ id: string; email: string }> {
     const { email, hash, salt, role, doctorData } = args;
-    const dataBase = await this.db.connect();
+    const { name, clinicName, clinicAddress, specializations } = doctorData;
+    const client = await this.db.connect();
 
     try {
-      await dataBase.query("BEGIN");
+      await client.query("BEGIN");
 
-      const userResult = await dataBase.query(
+      // Step 1: Create the User record
+      const userResult = await client.query(
         "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
         [email, hash, salt, role]
       );
       const newUser = userResult.rows[0];
 
-      const doctorResult = await dataBase.query(
+      // Step 2: Create the Doctor record
+      const doctorResult = await client.query(
         "INSERT INTO Doctors (user_id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4) RETURNING id",
-        [
-          newUser.id,
-          doctorData.name,
-          doctorData.clinicName,
-          doctorData.clinicAddress,
-        ]
+        [newUser.id, name, clinicName, clinicAddress]
       );
-      const newDoctor = doctorResult.rows[0];
+      const newDoctorId = doctorResult.rows[0].id;
 
-      // find or Create the Specialization
-      const specializationResult = await dataBase.query(
-        `INSERT INTO Specializations (name) VALUES ($1)
-         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-         RETURNING id`,
-        [doctorData.specializationName]
-      );
-      const specializationId = specializationResult.rows[0].id;
+      // Step 3: Loop through the payload to find-or-create specializations and services
+      for (const specPayload of specializations) {
+        // FIND OR CREATE the specialization in the master list
+        const specResult = await client.query(
+          `INSERT INTO Specializations (name) VALUES ($1)
+           ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name -- This handles the case where the unique name already exists
+           RETURNING id`,
+          [specPayload.name]
+        );
+        const specializationId = specResult.rows[0].id;
 
-      // link Doctor to Specialization
-      await dataBase.query(
-        "INSERT INTO Doctor_Specializations (doctor_id, specialization_id) VALUES ($1, $2)",
-        [newDoctor.id, specializationId]
-      );
+        // NOW it's safe to link the doctor to this specialization
+        await client.query(
+          "INSERT INTO Doctor_Specializations (doctor_id, specialization_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+          [newDoctorId, specializationId]
+        );
 
-      // loop through services to find/create and link them
-      if (doctorData.services && doctorData.services.length > 0) {
-        for (const service of doctorData.services) {
-          // find or create the service under the specialization
-          const serviceResult = await dataBase.query(
-            `INSERT INTO Services (name, specialization_id) VALUES ($1, $2)
-             ON CONFLICT (name, specialization_id) DO UPDATE SET name = EXCLUDED.name
+        for (const servicePayload of specPayload.services) {
+          // FIND OR CREATE the service in the master list
+          const serviceResult = await client.query(
+            `INSERT INTO Services (name) VALUES ($1)
+             ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
              RETURNING id`,
-            [service.name, specializationId]
+            [servicePayload.name]
           );
           const serviceId = serviceResult.rows[0].id;
 
-          // link the service to the doctor with a price
-          await dataBase.query(
-            "INSERT INTO Doctor_Services (doctor_id, service_id, price) VALUES ($1, $2, $3)",
-            [newDoctor.id, serviceId, service.price]
+          // Link the service to the specialization
+          await client.query(
+            "INSERT INTO Specialization_Services (specialization_id, service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            [specializationId, serviceId]
+          );
+
+          // Link the doctor to the service with their specific price
+          await client.query(
+            "INSERT INTO Doctor_Services (doctor_id, service_id, price) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            [newDoctorId, serviceId, servicePayload.price]
           );
         }
       }
 
-      await dataBase.query("COMMIT");
+      await client.query("COMMIT");
       return { id: newUser.id, email: newUser.email };
     } catch (e) {
-      await dataBase.query("ROLLBACK");
+      await client.query("ROLLBACK");
+      console.error("Error during doctor registration transaction:", e);
       throw e;
     } finally {
-      dataBase.release();
+      client.release();
     }
   }
 }

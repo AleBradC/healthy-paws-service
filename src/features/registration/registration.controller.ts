@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ROLES } from "../../constants";
-import { RegisterOwnerPayload, RegisterDoctorPayload } from "../../types";
+import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 import { RegistrationService } from "./registration.service";
 
 export class RegistrationController {
@@ -34,10 +34,9 @@ export class RegistrationController {
             .json({ message: "Doctor details are required." });
         }
 
-        const payload: RegisterDoctorPayload = { doctor };
-        const newDoctor = await this.registrationService.registerDoctor(
-          payload
-        );
+        const newDoctor = await this.registrationService.registerDoctor({
+          doctor,
+        } as RegisterDoctorPayload);
         return res.status(201).json({
           message: "Doctor registered successfully.",
           user: newDoctor,
