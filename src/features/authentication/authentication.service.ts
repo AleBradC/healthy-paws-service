@@ -45,6 +45,10 @@ export class AuthenticationService {
     return this.authenticationRepository.findOwnerIdByUserId(userId);
   }
 
+  public async findDoctorIdByUserId(userId: string): Promise<string | null> {
+    return this.authenticationRepository.findDoctorIdByUserId(userId);
+  }
+
   public async resetPassword(
     userId: string,
     newPassword: string

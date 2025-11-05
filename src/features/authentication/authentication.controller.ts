@@ -23,6 +23,7 @@ export class AuthenticationController {
         if (err) {
           return next(err);
         }
+
         if (!user) {
           return res
             .status(401)
@@ -40,7 +41,17 @@ export class AuthenticationController {
             } else {
               return res
                 .status(500)
-                .json({ message: "User profile not found." });
+                .json({ message: "Owner profile not found." });
+            }
+          } else if (user.role === "doctor") {
+            const doctorId =
+              await this.authenticationService.findDoctorIdByUserId(user.id);
+            if (doctorId) {
+              ownerOrDoctorId = doctorId;
+            } else {
+              return res
+                .status(500)
+                .json({ message: "Doctor profile not found." });
             }
           }
 
