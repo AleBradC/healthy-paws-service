@@ -25,17 +25,6 @@ CREATE TABLE Doctors (
     clinic_address VARCHAR(255)
 );
 
--- Core entities for medical information
-CREATE TABLE Specializations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL UNIQUE
-);
-
-CREATE TABLE Services (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL UNIQUE,
-);
-
 -- Core entity for pets
 CREATE TABLE Pets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -85,7 +74,18 @@ CREATE TABLE Appointments (
     CONSTRAINT unq_doctor_appointment UNIQUE (doctor_id, appointment_datetime)
 );
 
--- Junction tables for many-to-many relationships
+-- Keep Specializations as a simple lookup table
+CREATE TABLE Specializations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- Services should also be a simple lookup table of all possible services
+CREATE TABLE Services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL UNIQUE
+);
+
 CREATE TABLE Doctor_Specializations (
     doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
     specialization_id UUID NOT NULL REFERENCES Specializations(id) ON DELETE CASCADE,
@@ -98,10 +98,12 @@ CREATE TABLE Specialization_Services (
     PRIMARY KEY (specialization_id, service_id)
 );
 
-CREATE TABLE Doctor_Services (
-    doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
-    service_id UUID NOT NULL REFERENCES Services(id) ON DELETE CASCADE,
+CREATE TABLE Doctor_Service_Pricing (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    doctor_id UUID NOT NULL,
+    specialization_id UUID NOT NULL,
+    service_id UUID NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    PRIMARY KEY (doctor_id, service_id)
+    CONSTRAINT unq_doctor_service_specialization UNIQUE (doctor_id, specialization_id, service_id),
+    FOREIGN KEY (specialization_id, service_id) REFERENCES Specialization_Services(specialization_id, service_id) ON DELETE CASCADE
 );
-

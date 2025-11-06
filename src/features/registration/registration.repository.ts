@@ -77,39 +77,38 @@ export class RegistrationRepository {
     try {
       await client.query("BEGIN");
 
-      // Step 1: Create the User record
       const userResult = await client.query(
         "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
         [email, hash, salt, role]
       );
       const newUser = userResult.rows[0];
 
-      // Step 2: Create the Doctor record
       const doctorResult = await client.query(
         "INSERT INTO Doctors (user_id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4) RETURNING id",
         [newUser.id, name, clinicName, clinicAddress]
       );
       const newDoctorId = doctorResult.rows[0].id;
 
-      // Step 3: Loop through the payload to find-or-create specializations and services
+      // Step 3: Loop through the payload to create and link specializations and services
       for (const specPayload of specializations) {
-        // FIND OR CREATE the specialization in the master list
+        // Step 3a: Find or create the specialization in the master 'Specializations' list
         const specResult = await client.query(
           `INSERT INTO Specializations (name) VALUES ($1)
-           ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name -- This handles the case where the unique name already exists
+           ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
            RETURNING id`,
           [specPayload.name]
         );
         const specializationId = specResult.rows[0].id;
 
-        // NOW it's safe to link the doctor to this specialization
+        // Step 3b: Link the doctor to this specialization in 'Doctor_Specializations'
         await client.query(
           "INSERT INTO Doctor_Specializations (doctor_id, specialization_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
           [newDoctorId, specializationId]
         );
 
+        // Step 3c: Loop through the services for this specialization
         for (const servicePayload of specPayload.services) {
-          // FIND OR CREATE the service in the master list
+          // Find or create the service in the master 'Services' list
           const serviceResult = await client.query(
             `INSERT INTO Services (name) VALUES ($1)
              ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
@@ -118,16 +117,19 @@ export class RegistrationRepository {
           );
           const serviceId = serviceResult.rows[0].id;
 
-          // Link the service to the specialization
+          // Ensure the service is linked to the specialization in the 'Specialization_Services' template table
           await client.query(
             "INSERT INTO Specialization_Services (specialization_id, service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             [specializationId, serviceId]
           );
 
-          // Link the doctor to the service with their specific price
+          // Insert the doctor-specific price into the new 'Doctor_Service_Pricing' table
+          // This correctly links the price to the doctor, the specialization, AND the service.
           await client.query(
-            "INSERT INTO Doctor_Services (doctor_id, service_id, price) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-            [newDoctorId, serviceId, servicePayload.price]
+            `INSERT INTO Doctor_Service_Pricing (doctor_id, specialization_id, service_id, price)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (doctor_id, specialization_id, service_id) DO NOTHING`,
+            [newDoctorId, specializationId, serviceId, servicePayload.price]
           );
         }
       }
@@ -137,7 +139,7 @@ export class RegistrationRepository {
     } catch (e) {
       await client.query("ROLLBACK");
       console.error("Error during doctor registration transaction:", e);
-      throw e;
+      throw new Error("Failed to create doctor. Transaction was rolled back.");
     } finally {
       client.release();
     }
