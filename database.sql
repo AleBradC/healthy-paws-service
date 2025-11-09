@@ -105,5 +105,10 @@ CREATE TABLE Doctor_Service_Pricing (
     service_id UUID NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     CONSTRAINT unq_doctor_service_specialization UNIQUE (doctor_id, specialization_id, service_id),
-    FOREIGN KEY (specialization_id, service_id) REFERENCES Specialization_Services(specialization_id, service_id) ON DELETE CASCADE
+    FOREIGN KEY (doctor_id, specialization_id) 
+      REFERENCES Doctor_Specializations(doctor_id, specialization_id) 
+      ON DELETE CASCADE,
+    FOREIGN KEY (specialization_id, service_id) 
+      REFERENCES Specialization_Services(specialization_id, service_id) 
+      ON DELETE CASCADE
 );
