@@ -1,4 +1,4 @@
-CREATE DATABASE healthyPaws; 
+CREATE DATABASE healthyPaws;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Core entity tables for users and their roles
@@ -41,7 +41,8 @@ CREATE TABLE Health_Records_Lifelong (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
     condition TEXT NOT NULL,
-    treatment TEXT NOT NULL
+    treatment TEXT NOT NULL,
+    CONSTRAINT unq_lifelong_condition UNIQUE (pet_id, condition)
 );
 
 CREATE TABLE Health_Records_Active (
@@ -50,7 +51,8 @@ CREATE TABLE Health_Records_Active (
     condition TEXT NOT NULL,
     treatment TEXT NOT NULL,
     start_date DATE NOT NULL,
-    end_date DATE
+    end_date DATE,
+    CONSTRAINT unq_active_condition UNIQUE (pet_id, condition)
 );
 
 -- Scheduling tables
