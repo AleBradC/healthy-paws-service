@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as jwt from "jsonwebtoken";
 import { AuthenticationRepository } from "./authentication.repository";
-import { UserRecord } from "../../types";
+import { UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
 
 export class AuthenticationService {
@@ -11,7 +11,7 @@ export class AuthenticationService {
     this.authenticationRepository = authRepository;
   }
 
-  public generateAccessToken(payload: any): string {
+  public generateAccessToken(payload: JwtPayload): string {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error("JWT_SECRET is not defined in environment variables.");
@@ -22,23 +22,20 @@ export class AuthenticationService {
   public async validateUser(
     email: string,
     password: string
-  ): Promise<Pick<UserRecord, "id" | "email" | "role"> | null> {
+  ): Promise<UserResponse | null> {
     const user = await this.authenticationRepository.findUserByEmail(email);
     if (!user) return null;
-
     const calculatedHash = hashPassword(password, user.password_salt);
     if (calculatedHash === user.password_hash) {
       return { id: user.id, email: user.email, role: user.role };
     }
-
     return null;
   }
 
-  public async findUserById(id: string) {
+  public async findUserById(id: string): Promise<UserRecord | null> {
     const user = await this.authenticationRepository.findUserById(id);
     if (!user) return null;
-    const { password_hash, password_salt, ...userResult } = user;
-    return userResult;
+    return user;
   }
 
   public async findOwnerIdByUserId(userId: string): Promise<string | null> {
@@ -55,16 +52,13 @@ export class AuthenticationService {
   ): Promise<string> {
     const user = await this.authenticationRepository.findUserById(userId);
     if (!user) return "User not found";
-
     const newSalt = crypto.randomBytes(16).toString("hex");
     const newHash = hashPassword(newPassword, newSalt);
-
     await this.authenticationRepository.updateUserPassword(
       userId,
       newHash,
       newSalt
     );
-
     return "Password was changed";
   }
 }

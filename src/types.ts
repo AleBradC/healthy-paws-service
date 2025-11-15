@@ -1,63 +1,16 @@
-import { ROLES } from "./constants";
+import { Request, Response, NextFunction } from "express";
 
-// TODO
-
-// --- PAYLOAD TYPES  ---
-export interface OwnerPayload {
-  name: string;
-  email: string;
-  password?: string; // Optional for security
-  confirmPassword?: string;
+// --- CONSTANTS ---
+export enum ROLES {
+  DOCTOR_ROLE = "doctor",
+  OWNER_ROLE = "owner",
 }
 
-export interface PetPayload {
-  name: string;
-  type: string;
-  breed: string;
-  age: number;
-  weight: number;
-}
+/* ----------------------------------------------------------
+   DOMAIN / DB ENTITY TYPES
+---------------------------------------------------------- */
 
-export interface RegisterOwnerPayload {
-  owner: OwnerPayload;
-  pet: PetPayload;
-}
-
-export interface DoctorServicePayload {
-  id: string; // The service ID from the DB
-  name: string;
-  price: number;
-}
-
-export interface DoctorSpecializationPayload {
-  id: string; // The specialization ID from the DB
-  name: string;
-  services: DoctorServicePayload[];
-}
-
-export interface DoctorPayload {
-  name: string;
-  email: string;
-  password?: string; // Optional for security
-  confirmPassword?: string;
-  clinicName: string;
-  clinicAddress: string;
-  specializations: DoctorSpecializationPayload[];
-}
-
-export interface RegisterDoctorPayload {
-  doctor: DoctorPayload;
-}
-
-// --- API PAYLOAD ---
-export interface UnifiedRegisterPayload {
-  role: ROLES;
-  owner?: OwnerPayload;
-  pet?: PetPayload;
-  doctor?: DoctorPayload;
-}
-
-// --- DATABASE RECORD TYPES ---
+// Row from Users table (DB record, includes all fields)
 export interface UserRecord {
   id: string;
   email: string;
@@ -66,7 +19,7 @@ export interface UserRecord {
   role: ROLES;
 }
 
-// --- REPOSITORY METHOD ARGUMENT TYPES ---
+// --- DB Repository Method Argument Types ---
 export interface CreateOwnerArgs {
   email: string;
   hash: string;
@@ -75,17 +28,19 @@ export interface CreateOwnerArgs {
   ownerName: string;
   petData: PetPayload;
 }
-
 export interface CreateDoctorArgs {
   email: string;
   hash: string;
   salt: string;
   role: ROLES.DOCTOR_ROLE;
-  doctorData: DoctorPayload; // This is the key change
+  doctorData: DoctorPayload;
 }
 
-// --- AUTH TYPES ---
-export interface User {
+/* ----------------------------------------------------------
+   PAYLOAD / DTO TYPES
+---------------------------------------------------------- */
+
+export interface UserResponse {
   id: string;
   email: string;
   role: ROLES;
@@ -98,3 +53,138 @@ export interface JwtPayload {
   iat?: number;
   exp?: number;
 }
+
+// Registration owner payload (request DTO)
+export interface OwnerPayload {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+export interface PetPayload {
+  name: string;
+  type: string;
+  breed: string;
+  age: number;
+  weight: number;
+}
+export interface DoctorServicePayload {
+  id: string;
+  name: string;
+  price: number;
+}
+export interface DoctorSpecializationPayload {
+  id: string;
+  name: string;
+  services: DoctorServicePayload[];
+}
+export interface DoctorPayload {
+  name: string;
+  email: string;
+  password?: string;
+  confirmPassword?: string;
+  clinicName: string;
+  clinicAddress: string;
+  specializations: DoctorSpecializationPayload[];
+}
+export interface UnifiedRegisterPayload {
+  role: ROLES;
+  owner?: OwnerPayload;
+  pet?: PetPayload;
+  doctor?: DoctorPayload;
+}
+
+/* ----------------------------------------------------------
+   REGISTRATION TYPES
+---------------------------------------------------------- */
+
+// For registration service/controller (combines payloads for user creation)
+export interface RegisterOwnerPayload {
+  owner: OwnerPayload;
+  pet: PetPayload;
+}
+export interface RegisterDoctorPayload {
+  doctor: DoctorPayload;
+}
+
+/* ----------------------------------------------------------
+   AUTHENTICATION TYPES
+---------------------------------------------------------- */
+
+// Method Parameters (Passed into Auth/Registration services etc)
+export interface ValidateUserParams {
+  email: string;
+  password: string;
+}
+export interface ResetPasswordParams {
+  userId: string;
+  newPassword: string;
+}
+export interface FindUserByIdParams {
+  id: string;
+}
+export interface FindUserByEmailParams {
+  email: string;
+}
+export interface FindOwnerIdByUserIdParams {
+  userId: string;
+}
+export interface FindDoctorIdByUserIdParams {
+  userId: string;
+}
+export interface UpdateUserPasswordParams {
+  userId: string;
+  hash: string;
+  salt: string;
+}
+
+/* ----------------------------------------------------------
+   CONTROLLER PARAMETER TYPES
+---------------------------------------------------------- */
+
+export interface LoginControllerParams {
+  req: Request;
+  res: Response;
+  next: NextFunction;
+}
+export interface ResetPasswordControllerParams {
+  req: Request;
+  res: Response;
+}
+
+/* ----------------------------------------------------------
+   METHOD RETURN TYPES
+---------------------------------------------------------- */
+
+export interface AuthResult {
+  user: UserResponse | null;
+  message?: string;
+}
+export interface ResetPasswordResult {
+  message: string;
+}
+export interface FindUserResult {
+  user: UserRecord | null;
+}
+export interface OwnerDoctorIdResult {
+  id: string | null;
+}
+export interface UpdatePasswordResult {
+  success: boolean;
+}
+export interface RegisterUserResult {
+  id: string;
+  email: string;
+}
+
+/* ----------------------------------------------------------
+   MISCELLANEOUS STRUCTURES
+---------------------------------------------------------- */
+
+export interface PasswordResetTokenData {
+  userId: string;
+  expires: number;
+}
+export type PasswordResetTokens = {
+  [token: string]: PasswordResetTokenData;
+};

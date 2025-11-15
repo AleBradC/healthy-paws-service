@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { AuthenticationService } from "./authentication.service";
 import { passwordResetTokens } from "../../constants";
 import passport from "passport";
-import { User } from "../../types";
+import { UserResponse, PasswordResetTokenData } from "../../types";
 
 export class AuthenticationController {
   private authenticationService: AuthenticationService;
@@ -11,18 +11,16 @@ export class AuthenticationController {
     this.authenticationService = authenticationService;
   }
 
-  public login = (req: Request, res: Response, next: NextFunction) => {
+  public login = (req: Request, res: Response, next: NextFunction): void => {
     passport.authenticate(
       "local",
       { session: false },
       async (
         err: Error | null,
-        user: User | false,
-        info: { message: string }
+        user: UserResponse | false,
+        info: { message?: string }
       ) => {
-        if (err) {
-          return next(err);
-        }
+        if (err) return next(err);
 
         if (!user) {
           return res
@@ -31,7 +29,7 @@ export class AuthenticationController {
         }
 
         try {
-          let ownerOrDoctorId = user.id;
+          let ownerOrDoctorId: string = user.id;
 
           if (user.role === "owner") {
             const ownerId =
@@ -55,7 +53,7 @@ export class AuthenticationController {
             }
           }
 
-          const payload = {
+          const payload: UserResponse = {
             id: ownerOrDoctorId,
             email: user.email,
             role: user.role,
@@ -75,11 +73,15 @@ export class AuthenticationController {
     )(req, res, next);
   };
 
-  public resetPassword = async (req: Request, res: Response) => {
+  public resetPassword = async (
+    req: Request,
+    res: Response
+  ): Promise<Response | void> => {
     const { token } = req.params;
     const { newPassword } = req.body;
 
-    const tokenData = passwordResetTokens[token];
+    const tokenData: PasswordResetTokenData | undefined =
+      passwordResetTokens[token];
 
     if (!tokenData || tokenData.expires < Date.now()) {
       return res

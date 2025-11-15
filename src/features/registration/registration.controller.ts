@@ -10,7 +10,7 @@ export class RegistrationController {
     this.registrationService = registrationService;
   }
 
-  public register = async (req: Request, res: Response) => {
+  public register = async (req: Request, res: Response): Promise<Response> => {
     const { role, owner, pet, doctor } = req.body;
 
     try {
@@ -53,7 +53,9 @@ export class RegistrationController {
           .json({ message: "An account with this email already exists." });
       }
       console.error("Registration Error:", error);
-      res.status(500).json({ message: "An internal server error occurred." });
+      return res
+        .status(500)
+        .json({ message: "An internal server error occurred." });
     }
   };
 }

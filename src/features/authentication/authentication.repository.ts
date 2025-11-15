@@ -25,7 +25,7 @@ export class AuthenticationRepository {
   }
 
   public async findDoctorIdByUserId(userId: string): Promise<string | null> {
-    const result = await this.db.query(
+    const result: QueryResult<{ id: string }> = await this.db.query(
       "SELECT id FROM Doctors WHERE user_id = $1",
       [userId]
     );
@@ -33,7 +33,7 @@ export class AuthenticationRepository {
   }
 
   public async findOwnerIdByUserId(userId: string): Promise<string | null> {
-    const result = await this.db.query(
+    const result: QueryResult<{ id: string }> = await this.db.query(
       "SELECT id FROM Owners WHERE user_id = $1",
       [userId]
     );

@@ -11,7 +11,9 @@ export class RegistrationService {
     this.registrationRepository = registrationRepository;
   }
 
-  public async registerOwner(payload: RegisterOwnerPayload) {
+  public async registerOwner(
+    payload: RegisterOwnerPayload
+  ): Promise<{ id: string; email: string }> {
     const existingUser = await this.registrationRepository.findUserByEmail(
       payload.owner.email
     );
@@ -32,7 +34,9 @@ export class RegistrationService {
     });
   }
 
-  public async registerDoctor(payload: RegisterDoctorPayload) {
+  public async registerDoctor(
+    payload: RegisterDoctorPayload
+  ): Promise<{ id: string; email: string }> {
     const existingUser = await this.registrationRepository.findUserByEmail(
       payload.doctor.email
     );
