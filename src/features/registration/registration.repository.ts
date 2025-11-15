@@ -1,5 +1,6 @@
 import { Pool, QueryResult } from "pg";
 import { UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
+import { ErrorMessages } from "../../constants";
 
 export class RegistrationRepository {
   private db: Pool;
@@ -133,7 +134,7 @@ export class RegistrationRepository {
     } catch (e) {
       await client.query("ROLLBACK");
       console.error("Error during doctor registration transaction:", e);
-      throw new Error("Failed to create doctor. Transaction was rolled back.");
+      throw new Error(ErrorMessages.REGISTRATION_FAILED);
     } finally {
       client.release();
     }

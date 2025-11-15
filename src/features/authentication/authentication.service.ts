@@ -3,6 +3,7 @@ import * as jwt from "jsonwebtoken";
 import { AuthenticationRepository } from "./authentication.repository";
 import { UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
+import { ErrorMessages } from "../../constants";
 
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
@@ -14,7 +15,7 @@ export class AuthenticationService {
   public generateAccessToken(payload: JwtPayload): string {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error("JWT_SECRET is not defined in environment variables.");
+      throw new Error(ErrorMessages.JWT_SECRET_UNDEFINED);
     }
     return jwt.sign(payload, secret, { expiresIn: "1h" });
   }

@@ -10,6 +10,7 @@ import { JwtPayload } from "jsonwebtoken";
 import pool from "../config/db";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
+import { ErrorMessages } from "../../constants";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
@@ -23,7 +24,9 @@ passport.use(
       try {
         const user = await authenticationService.validateUser(email, password);
         if (!user) {
-          return done(null, false, { message: "Invalid email or password." });
+          return done(null, false, {
+            message: ErrorMessages.INVALID_CREDENTIALS,
+          });
         }
         return done(null, user);
       } catch (err) {
@@ -35,7 +38,7 @@ passport.use(
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined in environment variables.");
+  throw new Error(ErrorMessages.JWT_SECRET_UNDEFINED);
 }
 
 const jwtOptions: StrategyOptions = {

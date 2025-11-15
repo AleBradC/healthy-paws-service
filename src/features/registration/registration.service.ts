@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
 import { RegistrationRepository } from "./registration.repository";
-import { ROLES } from "../../constants";
+import { ErrorMessages, ROLES } from "../../constants";
 import { hashPassword } from "../../helpers";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 
@@ -18,7 +18,7 @@ export class RegistrationService {
       payload.owner.email
     );
     if (existingUser) {
-      throw new Error("An account with this email already exists.");
+      throw new Error(ErrorMessages.ACCOUNT_EXISTS);
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
@@ -41,7 +41,7 @@ export class RegistrationService {
       payload.doctor.email
     );
     if (existingUser) {
-      throw new Error("An account with this email already exists.");
+      throw new Error(ErrorMessages.ACCOUNT_EXISTS);
     }
 
     const salt = crypto.randomBytes(16).toString("hex");

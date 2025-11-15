@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ROLES } from "../../constants";
+import { ErrorMessages, ROLES } from "../../constants";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 import { RegistrationService } from "./registration.service";
 
@@ -18,7 +18,7 @@ export class RegistrationController {
         if (!owner || !pet) {
           return res
             .status(400)
-            .json({ message: "Owner and animal details are required." });
+            .json({ message: ErrorMessages.OWNER_AND_ANIMAL_REQUIRED });
         }
 
         const payload: RegisterOwnerPayload = { owner, pet };
@@ -31,7 +31,7 @@ export class RegistrationController {
         if (!doctor) {
           return res
             .status(400)
-            .json({ message: "Doctor details are required." });
+            .json({ message: ErrorMessages.DOCTOR_DETAILS_REQUIRED });
         }
 
         const newDoctor = await this.registrationService.registerDoctor({
@@ -43,19 +43,17 @@ export class RegistrationController {
         });
       } else {
         return res.status(400).json({
-          message: "A valid role ('owner' or 'doctor') must be specified.",
+          message: ErrorMessages.INVALID_ROLE,
         });
       }
     } catch (error: any) {
       if (error.message.includes("already exists")) {
-        return res
-          .status(409)
-          .json({ message: "An account with this email already exists." });
+        return res.status(409).json({ message: ErrorMessages.ACCOUNT_EXISTS });
       }
       console.error("Registration Error:", error);
       return res
         .status(500)
-        .json({ message: "An internal server error occurred." });
+        .json({ message: ErrorMessages.INTERNAL_SERVER_ERROR });
     }
   };
 }

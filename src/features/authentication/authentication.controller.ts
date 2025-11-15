@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { AuthenticationService } from "./authentication.service";
-import { passwordResetTokens } from "../../constants";
+import { ErrorMessages, passwordResetTokens } from "../../constants";
 import passport from "passport";
 import { UserResponse, PasswordResetTokenData } from "../../types";
 
@@ -103,7 +103,7 @@ export class AuthenticationController {
         .status(200)
         .json({ message: "Password has been reset successfully." });
     } else {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: ErrorMessages.USER_NOT_FOUND });
     }
   };
 }
