@@ -46,20 +46,4 @@ export class AuthenticationService {
   public async findDoctorIdByUserId(userId: string): Promise<string | null> {
     return this.authenticationRepository.findDoctorIdByUserId(userId);
   }
-
-  public async resetPassword(
-    userId: string,
-    newPassword: string
-  ): Promise<string> {
-    const user = await this.authenticationRepository.findUserById(userId);
-    if (!user) return "User not found";
-    const newSalt = crypto.randomBytes(16).toString("hex");
-    const newHash = hashPassword(newPassword, newSalt);
-    await this.authenticationRepository.updateUserPassword(
-      userId,
-      newHash,
-      newSalt
-    );
-    return "Password was changed";
-  }
 }

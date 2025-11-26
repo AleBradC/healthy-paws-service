@@ -15,6 +15,5 @@ const authenticationController = new AuthenticationController(
 );
 
 router.post("/login", authenticationController.login);
-router.post("/reset-password/:token", authenticationController.resetPassword);
 
 export default router;

@@ -39,15 +39,4 @@ export class AuthenticationRepository {
     );
     return result.rows[0]?.id || null;
   }
-
-  public async updateUserPassword(
-    userId: string,
-    hash: string,
-    salt: string
-  ): Promise<void> {
-    await this.db.query(
-      "UPDATE Users SET password_hash = $1, password_salt = $2 WHERE id = $3",
-      [hash, salt, userId]
-    );
-  }
 }

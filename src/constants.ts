@@ -3,10 +3,6 @@ export enum ROLES {
   OWNER_ROLE = "owner",
 }
 
-export const passwordResetTokens: {
-  [token: string]: { userId: string; expires: number };
-} = {};
-
 export enum ErrorMessages {
   JWT_SECRET_UNDEFINED = "JWT_SECRET is not defined in environment variables.",
   USER_NOT_FOUND = "User not found.",

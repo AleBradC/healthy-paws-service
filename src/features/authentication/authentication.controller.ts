@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { AuthenticationService } from "./authentication.service";
-import { ErrorMessages, passwordResetTokens } from "../../constants";
 import passport from "passport";
-import { UserResponse, PasswordResetTokenData } from "../../types";
+import { AuthenticationService } from "./authentication.service";
+import { UserResponse } from "../../types";
 
 export class AuthenticationController {
   private authenticationService: AuthenticationService;
@@ -71,39 +70,5 @@ export class AuthenticationController {
         }
       }
     )(req, res, next);
-  };
-
-  public resetPassword = async (
-    req: Request,
-    res: Response
-  ): Promise<Response | void> => {
-    const { token } = req.params;
-    const { newPassword } = req.body;
-
-    const tokenData: PasswordResetTokenData | undefined =
-      passwordResetTokens[token];
-
-    if (!tokenData || tokenData.expires < Date.now()) {
-      return res
-        .status(400)
-        .json({ message: "Token is invalid or has expired." });
-    }
-    if (!newPassword) {
-      return res.status(400).json({ message: "New password is required." });
-    }
-
-    const resultMessage = await this.authenticationService.resetPassword(
-      tokenData.userId,
-      newPassword
-    );
-
-    if (resultMessage === "Password was changed") {
-      delete passwordResetTokens[token];
-      return res
-        .status(200)
-        .json({ message: "Password has been reset successfully." });
-    } else {
-      return res.status(404).json({ message: ErrorMessages.USER_NOT_FOUND });
-    }
   };
 }
