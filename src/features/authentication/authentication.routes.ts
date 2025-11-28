@@ -15,5 +15,14 @@ const authenticationController = new AuthenticationController(
 );
 
 router.post("/login", authenticationController.login);
+router.post(
+  "/reset-password/send-code",
+  authenticationController.startPasswordReset
+);
+router.post(
+  "/reset-password/verify-code",
+  authenticationController.verifyResetCode
+);
+router.post("/reset-password/reset", authenticationController.resetPassword);
 
 export default router;

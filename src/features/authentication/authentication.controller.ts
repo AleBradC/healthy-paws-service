@@ -71,4 +71,44 @@ export class AuthenticationController {
       }
     )(req, res, next);
   };
+
+  public startPasswordReset = async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      await this.authenticationService.startPasswordReset(email);
+      res.json({ message: "Reset code sent to your email" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  public verifyResetCode = async (req: Request, res: Response) => {
+    try {
+      const { email, code } = req.body;
+      const isValid = await this.authenticationService.verifyResetCode(
+        email,
+        code
+      );
+
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      res.json({ message: "Code verified successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  public resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { email, code, newPassword } = req.body;
+
+      await this.authenticationService.resetPassword(email, code, newPassword);
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  };
 }
