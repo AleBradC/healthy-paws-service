@@ -6,8 +6,17 @@ import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthenticationRepository } from "./authentication.repository";
 import { UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
-import { ErrorMessages } from "../../constants";
-import { getEmailTemplate } from "../../email-template";
+import {
+  getResetEmailHtml,
+  getResetEmailSubject,
+  getResetEmailText,
+} from "../../email-template";
+import {
+  ClientErrorMessages,
+  SystemErrorMessages,
+} from "../../errors.ts/constants";
+import { ClientError, SystemError } from "../../errors.ts/AppError";
+import { APP_NAME } from "../../core/config/email";
 
 dotenv.config();
 
@@ -22,7 +31,7 @@ export class AuthenticationService {
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
-      throw new Error(ErrorMessages.JWT_SECRET_UNDEFINED);
+      throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
     }
 
     return jwt.sign(payload, secret, { expiresIn: "1h" });
@@ -32,50 +41,69 @@ export class AuthenticationService {
     email: string,
     password: string
   ): Promise<UserResponse | null> {
-    const user = await this.authenticationRepository.findUserByEmail(email);
+    try {
+      const user = await this.authenticationRepository.findUserByEmail(email);
+      if (!user) {
+        return null;
+      }
 
-    if (!user) {
+      const calculatedHash = hashPassword(password, user.password_salt);
+      if (calculatedHash === user.password_hash) {
+        return { id: user.id, email: user.email, role: user.role };
+      }
+
       return null;
+    } catch (err) {
+      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
     }
-
-    const calculatedHash = hashPassword(password, user.password_salt);
-
-    if (calculatedHash === user.password_hash) {
-      return { id: user.id, email: user.email, role: user.role };
-    }
-
-    return null;
   }
 
   public async findUserById(id: string): Promise<UserRecord | null> {
-    return this.authenticationRepository.findUserById(id);
+    try {
+      return await this.authenticationRepository.findUserById(id);
+    } catch (err) {
+      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
+    }
   }
 
   public async findOwnerIdByUserId(userId: string): Promise<string | null> {
-    return this.authenticationRepository.findOwnerIdByUserId(userId);
+    try {
+      return await this.authenticationRepository.findOwnerIdByUserId(userId);
+    } catch (err) {
+      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
+    }
   }
 
   public async findDoctorIdByUserId(userId: string): Promise<string | null> {
-    return this.authenticationRepository.findDoctorIdByUserId(userId);
+    try {
+      return await this.authenticationRepository.findDoctorIdByUserId(userId);
+    } catch (err) {
+      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
+    }
   }
 
   public async startPasswordReset(email: string): Promise<void> {
-    const user = await this.authenticationRepository.findUserByEmail(email);
+    try {
+      const user = await this.authenticationRepository.findUserByEmail(email);
+      if (!user) {
+        throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
+      }
 
-    if (!user) {
-      throw new Error("Email not found");
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await this.authenticationRepository.createResetToken(
+        user.id,
+        resetCode,
+        expiresAt
+      );
+      await this.sendResetCodeEmail(email, resetCode);
+    } catch (err) {
+      if (err instanceof ClientError || err instanceof SystemError) {
+        throw err;
+      }
+      throw new SystemError(SystemErrorMessages.DB_TRANSACTION_FAILED, err);
     }
-
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-    await this.authenticationRepository.createResetToken(
-      user.id,
-      resetCode,
-      expiresAt
-    );
-
-    await this.sendResetCodeEmail(email, resetCode);
   }
 
   private async sendResetCodeEmail(
@@ -84,7 +112,7 @@ export class AuthenticationService {
   ): Promise<void> {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
-      port: process.env.MAIL_PORT,
+      port: Number(process.env.MAIL_PORT),
       secure: false,
       auth: {
         user: process.env.MAIL_USER,
@@ -92,33 +120,37 @@ export class AuthenticationService {
       },
     } as SMTPTransport.Options);
 
-    const emailHtml = getEmailTemplate(resetCode);
+    const templateParams = { code: resetCode };
 
     try {
       await transporter.sendMail({
-        from: `"Healthy Paws Clinic" <${process.env.MAIL_FROM}>`,
+        from: `"${APP_NAME}" <${process.env.MAIL_FROM}>`,
         to: [toEmail],
-        subject: `Your Verification Code: ${resetCode} - Healthy Paws`,
-        text: `Your Healthy Paws reset code is: ${resetCode}`,
-        html: emailHtml,
+        subject: getResetEmailSubject(templateParams),
+        text: getResetEmailText(templateParams),
+        html: getResetEmailHtml(templateParams),
       });
     } catch (err) {
-      console.error("Error while sending mail", err);
+      throw new SystemError(SystemErrorMessages.MAIL_PROVIDER_ERROR, err);
     }
   }
 
   public async verifyResetCode(email: string, code: string): Promise<boolean> {
-    const user = await this.authenticationRepository.findUserByEmail(email);
+    try {
+      const user = await this.authenticationRepository.findUserByEmail(email);
+      if (!user) {
+        return false;
+      }
 
-    if (!user) {
-      return false;
+      const token = await this.authenticationRepository.findValidResetToken(
+        user.id,
+        code
+      );
+      return !!token;
+    } catch (err) {
+      if (err instanceof SystemError) throw err;
+      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
     }
-
-    const token = await this.authenticationRepository.findValidResetToken(
-      user.id,
-      code
-    );
-    return !!token;
   }
 
   public async resetPassword(
@@ -128,7 +160,7 @@ export class AuthenticationService {
   ): Promise<void> {
     const user = await this.authenticationRepository.findUserByEmail(email);
     if (!user) {
-      throw new Error("Email not found");
+      throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
     }
 
     const token = await this.authenticationRepository.findValidResetToken(
@@ -137,17 +169,21 @@ export class AuthenticationService {
     );
 
     if (!token) {
-      throw new Error("Invalid or expired reset code");
+      throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
     }
 
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedPassword = hashPassword(newPassword, salt);
 
-    await this.authenticationRepository.updateUserPassword(
-      user.id,
-      hashedPassword,
-      salt
-    );
-    await this.authenticationRepository.markResetTokenUsed(token.id);
+    try {
+      await this.authenticationRepository.updateUserPassword(
+        user.id,
+        hashedPassword,
+        salt
+      );
+      await this.authenticationRepository.markResetTokenUsed(token.id);
+    } catch (err) {
+      throw new SystemError(SystemErrorMessages.DB_TRANSACTION_FAILED, err);
+    }
   }
 }

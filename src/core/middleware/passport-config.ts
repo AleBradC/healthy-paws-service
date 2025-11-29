@@ -10,7 +10,11 @@ import { JwtPayload } from "jsonwebtoken";
 import pool from "../config/db";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
-import { ErrorMessages } from "../../constants";
+import {
+  ClientErrorMessages,
+  SystemErrorMessages,
+} from "../../errors.ts/constants";
+import { SystemError } from "../../errors.ts/AppError";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
@@ -25,9 +29,10 @@ passport.use(
         const user = await authenticationService.validateUser(email, password);
         if (!user) {
           return done(null, false, {
-            message: ErrorMessages.INVALID_CREDENTIALS,
+            message: ClientErrorMessages.INVALID_CREDENTIALS,
           });
         }
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -38,7 +43,7 @@ passport.use(
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error(ErrorMessages.JWT_SECRET_UNDEFINED);
+  throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
 }
 
 const jwtOptions: StrategyOptions = {

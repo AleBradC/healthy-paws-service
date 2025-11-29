@@ -1,7 +1,12 @@
-import { Request, Response } from "express";
-import { ErrorMessages, ROLES } from "../../constants";
+import { Request, Response, NextFunction } from "express";
+import { ROLES } from "../../constants";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 import { RegistrationService } from "./registration.service";
+import {
+  ClientErrorMessages,
+  SuccessMessages,
+} from "../../errors.ts/constants";
+import { ClientError } from "../../errors.ts/AppError";
 
 export class RegistrationController {
   private registrationService: RegistrationService;
@@ -10,50 +15,54 @@ export class RegistrationController {
     this.registrationService = registrationService;
   }
 
-  public register = async (req: Request, res: Response): Promise<Response> => {
+  public register = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     const { role, owner, pet, doctor } = req.body;
 
     try {
       if (role === ROLES.OWNER_ROLE) {
         if (!owner || !pet) {
-          return res
-            .status(400)
-            .json({ message: ErrorMessages.OWNER_AND_ANIMAL_REQUIRED });
+          throw new ClientError(
+            ClientErrorMessages.OWNER_AND_ANIMAL_REQUIRED,
+            400
+          );
         }
 
         const payload: RegisterOwnerPayload = { owner, pet };
         const newOwner = await this.registrationService.registerOwner(payload);
-        return res.status(201).json({
-          message: "Pet owner registered successfully.",
+
+        res.status(201).json({
+          message: SuccessMessages.OWNER_REGISTERED,
           user: newOwner,
         });
-      } else if (role === ROLES.DOCTOR_ROLE) {
+        return;
+      }
+
+      if (role === ROLES.DOCTOR_ROLE) {
         if (!doctor) {
-          return res
-            .status(400)
-            .json({ message: ErrorMessages.DOCTOR_DETAILS_REQUIRED });
+          throw new ClientError(
+            ClientErrorMessages.DOCTOR_DETAILS_REQUIRED,
+            400
+          );
         }
 
         const newDoctor = await this.registrationService.registerDoctor({
           doctor,
         } as RegisterDoctorPayload);
-        return res.status(201).json({
-          message: "Doctor registered successfully.",
+
+        res.status(201).json({
+          message: SuccessMessages.DOCTOR_REGISTERED,
           user: newDoctor,
         });
-      } else {
-        return res.status(400).json({
-          message: ErrorMessages.INVALID_ROLE,
-        });
+        return;
       }
-    } catch (error: any) {
-      if (error.message.includes("already exists")) {
-        return res.status(409).json({ message: ErrorMessages.ACCOUNT_EXISTS });
-      }
-      console.error("Registration Error:", error);
-      return res
-        .status(500)
-        .json({ message: ErrorMessages.INTERNAL_SERVER_ERROR });
+
+      throw new ClientError(ClientErrorMessages.INVALID_ROLE, 400);
+    } catch (error) {
+      next(error);
     }
   };
 }
