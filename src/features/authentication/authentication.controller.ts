@@ -2,6 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { UserResponse } from "../../types";
+import { ClientErrorMessages } from "../../errors.ts/constants";
+import { ClientError } from "../../errors.ts/ClientError";
+import { ROLES, SuccessMessages } from "../../constants";
 
 export class AuthenticationController {
   private authenticationService: AuthenticationService;
@@ -19,36 +22,43 @@ export class AuthenticationController {
         user: UserResponse | false,
         info: { message?: string }
       ) => {
-        if (err) return next(err);
+        if (err) {
+          return next(err);
+        }
 
         if (!user) {
-          return res
-            .status(401)
-            .json({ message: info?.message || "Invalid credentials." });
+          return next(
+            new ClientError(
+              info?.message || ClientErrorMessages.INVALID_CREDENTIALS,
+              401
+            )
+          );
         }
 
         try {
           let ownerOrDoctorId: string = user.id;
 
-          if (user.role === "owner") {
+          if (user.role === ROLES.OWNER_ROLE) {
             const ownerId =
               await this.authenticationService.findOwnerIdByUserId(user.id);
             if (ownerId) {
               ownerOrDoctorId = ownerId;
             } else {
-              return res
-                .status(500)
-                .json({ message: "Owner profile not found." });
+              throw new ClientError(
+                ClientErrorMessages.OWNER_PROFILE_NOT_FOUND,
+                404
+              );
             }
-          } else if (user.role === "doctor") {
+          } else if (user.role === ROLES.DOCTOR_ROLE) {
             const doctorId =
               await this.authenticationService.findDoctorIdByUserId(user.id);
             if (doctorId) {
               ownerOrDoctorId = doctorId;
             } else {
-              return res
-                .status(500)
-                .json({ message: "Doctor profile not found." });
+              throw new ClientError(
+                ClientErrorMessages.DOCTOR_PROFILE_NOT_FOUND,
+                404
+              );
             }
           }
 
@@ -60,7 +70,7 @@ export class AuthenticationController {
           const token = this.authenticationService.generateAccessToken(payload);
 
           return res.json({
-            message: "Logged in successfully",
+            message: SuccessMessages.LOGIN_SUCCESS,
             accessToken: token,
             role: user.role,
             id: ownerOrDoctorId,
@@ -72,18 +82,29 @@ export class AuthenticationController {
     )(req, res, next);
   };
 
-  public startPasswordReset = async (req: Request, res: Response) => {
+  public startPasswordReset = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { email } = req.body;
+      if (!email) {
+        throw new ClientError(ClientErrorMessages.EMAIL_REQUIRED, 400);
+      }
 
       await this.authenticationService.startPasswordReset(email);
-      res.json({ message: "Reset code sent to your email" });
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.json({ message: SuccessMessages.RESET_CODE_SENT });
+    } catch (error) {
+      next(error);
     }
   };
 
-  public verifyResetCode = async (req: Request, res: Response) => {
+  public verifyResetCode = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { email, code } = req.body;
       const isValid = await this.authenticationService.verifyResetCode(
@@ -92,23 +113,31 @@ export class AuthenticationController {
       );
 
       if (!isValid) {
-        return res.status(400).json({ message: "Invalid or expired code" });
+        throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
       }
 
-      res.json({ message: "Code verified successfully" });
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.json({ message: SuccessMessages.RESET_CODE_VERIFIED });
+    } catch (error) {
+      next(error);
     }
   };
 
-  public resetPassword = async (req: Request, res: Response) => {
+  public resetPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { email, code, newPassword } = req.body;
 
+      if (!newPassword) {
+        throw new ClientError(ClientErrorMessages.NEW_PASSWORD_REQUIRED, 400);
+      }
+
       await this.authenticationService.resetPassword(email, code, newPassword);
-      res.json({ message: "Password reset successfully" });
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.json({ message: SuccessMessages.PASSWORD_RESET_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   };
 }

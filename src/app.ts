@@ -6,6 +6,7 @@ import pool from "./core/config/db";
 import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
+import { globalErrorHandler } from "./core/middleware/error-middleware";
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ app.use(passport.initialize());
 
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
+
+app.use(globalErrorHandler);
 
 const startServer = async () => {
   try {

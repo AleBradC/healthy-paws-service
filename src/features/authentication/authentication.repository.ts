@@ -47,7 +47,7 @@ export class AuthenticationRepository {
   ): Promise<void> {
     await this.db.query(
       `INSERT INTO PasswordResetTokens (user_id, reset_code, expires_at) 
-     VALUES ($1, $2, $3)`,
+       VALUES ($1, $2, $3)`,
       [userId, resetCode, expiresAt]
     );
   }
@@ -59,7 +59,7 @@ export class AuthenticationRepository {
     const now = new Date();
     const result = await this.db.query(
       `SELECT id FROM PasswordResetTokens 
-     WHERE user_id = $1 AND reset_code = $2 AND expires_at > $3 AND used = false`,
+       WHERE user_id = $1 AND reset_code = $2 AND expires_at > $3 AND used = false`,
       [userId, code, now]
     );
     return result.rows[0] || null;

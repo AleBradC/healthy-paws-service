@@ -1,14 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-
-// --- CONSTANTS ---
-export enum ROLES {
-  DOCTOR_ROLE = "doctor",
-  OWNER_ROLE = "owner",
-}
-
-/* ----------------------------------------------------------
-   DOMAIN / DB ENTITY TYPES
----------------------------------------------------------- */
+import { ROLES } from "./constants";
 
 // Row from Users table (DB record, includes all fields)
 export interface UserRecord {

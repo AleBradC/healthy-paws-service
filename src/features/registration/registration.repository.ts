@@ -1,6 +1,5 @@
 import { Pool, QueryResult } from "pg";
 import { UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
-import { ErrorMessages } from "../../constants";
 
 export class RegistrationRepository {
   private db: Pool;
@@ -29,24 +28,24 @@ export class RegistrationRepository {
     args: CreateOwnerArgs
   ): Promise<{ id: string; email: string }> {
     const { email, hash, salt, role, ownerName, petData } = args;
-    const dataBase = await this.db.connect();
+    const client = await this.db.connect();
 
     try {
-      await dataBase.query("BEGIN");
+      await client.query("BEGIN");
 
-      const userResult = await dataBase.query(
+      const userResult = await client.query(
         "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
         [email, hash, salt, role]
       );
       const newUser = userResult.rows[0];
 
-      const ownerResult = await dataBase.query(
+      const ownerResult = await client.query(
         "INSERT INTO Owners (user_id, name) VALUES ($1, $2) RETURNING id",
         [newUser.id, ownerName]
       );
       const newOwner = ownerResult.rows[0];
 
-      await dataBase.query(
+      await client.query(
         "INSERT INTO Pets (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
         [
           newOwner.id,
@@ -58,14 +57,14 @@ export class RegistrationRepository {
         ]
       );
 
-      await dataBase.query("COMMIT");
+      await client.query("COMMIT");
 
       return { id: newUser.id, email: newUser.email };
-    } catch (e) {
-      await dataBase.query("ROLLBACK");
-      throw e;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err; // raw DB error goes up to service
     } finally {
-      dataBase.release();
+      client.release();
     }
   }
 
@@ -131,10 +130,9 @@ export class RegistrationRepository {
       await client.query("COMMIT");
 
       return { id: newUser.id, email: newUser.email };
-    } catch (e) {
+    } catch (err) {
       await client.query("ROLLBACK");
-      console.error("Error during doctor registration transaction:", e);
-      throw new Error(ErrorMessages.REGISTRATION_FAILED);
+      throw err;
     } finally {
       client.release();
     }
