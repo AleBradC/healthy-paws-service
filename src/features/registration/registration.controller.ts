@@ -6,7 +6,7 @@ import {
   ClientErrorMessages,
   SuccessMessages,
 } from "../../errors.ts/constants";
-import { ClientError } from "../../errors.ts/AppError";
+import { ClientError } from "../../errors.ts/ClientError";
 
 export class RegistrationController {
   private registrationService: RegistrationService;

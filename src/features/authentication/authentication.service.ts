@@ -15,7 +15,8 @@ import {
   ClientErrorMessages,
   SystemErrorMessages,
 } from "../../errors.ts/constants";
-import { ClientError, SystemError } from "../../errors.ts/AppError";
+import { ClientError } from "../../errors.ts/ClientError";
+import { SystemError } from "../../errors.ts/SystemError";
 import { APP_NAME } from "../../core/config/email";
 
 dotenv.config();

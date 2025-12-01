@@ -3,7 +3,7 @@ import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { UserResponse } from "../../types";
 import { ClientErrorMessages } from "../../errors.ts/constants";
-import { ClientError } from "../../errors.ts/AppError";
+import { ClientError } from "../../errors.ts/ClientError";
 import { ROLES, SuccessMessages } from "../../constants";
 
 export class AuthenticationController {

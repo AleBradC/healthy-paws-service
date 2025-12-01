@@ -3,11 +3,12 @@ import { RegistrationRepository } from "./registration.repository";
 import { ROLES } from "../../constants";
 import { hashPassword } from "../../helpers";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
-import { ClientError, SystemError } from "../../errors.ts/AppError";
+import { ClientError } from "../../errors.ts/ClientError";
 import {
   ClientErrorMessages,
   SystemErrorMessages,
 } from "../../errors.ts/constants";
+import { SystemError } from "../../errors.ts/SystemError";
 
 export class RegistrationService {
   private registrationRepository: RegistrationRepository;

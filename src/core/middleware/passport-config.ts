@@ -14,7 +14,7 @@ import {
   ClientErrorMessages,
   SystemErrorMessages,
 } from "../../errors.ts/constants";
-import { SystemError } from "../../errors.ts/AppError";
+import { SystemError } from "../../errors.ts/ClientError";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
