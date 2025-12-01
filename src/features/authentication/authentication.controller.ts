@@ -2,8 +2,8 @@ import { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { UserResponse } from "../../types";
-import { ClientErrorMessages } from "../../errors.ts/constants";
-import { ClientError } from "../../errors.ts/ClientError";
+import { ClientErrorMessages } from "../../errors/constants";
+import { ClientError } from "../../errors/ClientError";
 import { ROLES, SuccessMessages } from "../../constants";
 
 export class AuthenticationController {

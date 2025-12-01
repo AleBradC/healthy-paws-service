@@ -13,8 +13,8 @@ import { AuthenticationRepository } from "../../features/authentication/authenti
 import {
   ClientErrorMessages,
   SystemErrorMessages,
-} from "../../errors.ts/constants";
-import { SystemError } from "../../errors.ts/ClientError";
+} from "../../errors/constants";
+import { SystemError } from "../../errors/ClientError";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(

@@ -2,11 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { ROLES } from "../../constants";
 import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 import { RegistrationService } from "./registration.service";
-import {
-  ClientErrorMessages,
-  SuccessMessages,
-} from "../../errors.ts/constants";
-import { ClientError } from "../../errors.ts/ClientError";
+import { ClientErrorMessages, SuccessMessages } from "../../errors/constants";
+import { ClientError } from "../../errors/ClientError";
 
 export class RegistrationController {
   private registrationService: RegistrationService;

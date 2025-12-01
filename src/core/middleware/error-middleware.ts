@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { ClientError, SystemError } from "../../errors.ts/ClientError";
-import { ClientErrorMessages } from "../../errors.ts/constants";
+import { ClientError, SystemError } from "../../errors/ClientError";
+import { ClientErrorMessages } from "../../errors/constants";
 
 export const globalErrorHandler = (
   err: Error,
