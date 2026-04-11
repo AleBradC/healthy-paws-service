@@ -1,19 +1,19 @@
-import pool from "../core/config/db";
-import { CreatePetInput, UpdatePetInput } from "../graphql/types";
+import pool from "../../core/config/db";
+import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
 import {
   ActiveTreatment,
   Appointment,
   LifelongCondition,
   Owner,
   Pet,
-} from "../types";
-import { ClientError } from "../errors/ClientError";
-import { SystemError } from "../errors/SystemError";
+} from "../../types";
+import { ClientError } from "../../errors/ClientError";
+import { SystemError } from "../../errors/SystemError";
 import {
   PetErrorMessages,
   OwnerErrorMessages,
   SystemErrorMessages,
-} from "../errors/constants";
+} from "../../errors/constants";
 
 export async function getPetById(petId: string): Promise<Pet | null> {
   const query = `SELECT * FROM Pets WHERE id = $1;`;
@@ -87,7 +87,7 @@ export async function getActiveTreatmentsByPet(
       return [];
     }
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       start_date: row.start_date.toISOString(),
       end_date: row.end_date ? row.end_date.toISOString() : undefined,
@@ -110,7 +110,7 @@ export async function getAppointmentsByPet(
   try {
     const result = await pool.query(query, [petId]);
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       datetime: row.appointment_datetime.toISOString(),
     }));

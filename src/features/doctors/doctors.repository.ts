@@ -1,4 +1,4 @@
-import pool from "../core/config/db";
+import pool from "../../core/config/db";
 import {
   AddDoctorAvailabilityInput,
   AddDoctorSpecializationInput,
@@ -6,7 +6,7 @@ import {
   RemoveDoctorSpecializationInput,
   UpdateDoctorProfileInput,
   UpdateDoctorSpecializationInput,
-} from "../graphql/types";
+} from "../../schema/resolvers.types";
 import {
   Doctor,
   Specialization,
@@ -14,10 +14,10 @@ import {
   Availability,
   Appointment,
   Pet,
-} from "../types";
-import { ClientError } from "../errors/ClientError";
-import { SystemError } from "../errors/SystemError";
-import { DoctorErrorMessages, SystemErrorMessages } from "../errors/constants";
+} from "../../types";
+import { ClientError } from "../../errors/ClientError";
+import { SystemError } from "../../errors/SystemError";
+import { DoctorErrorMessages, SystemErrorMessages } from "../../errors/constants";
 
 export async function getAllDoctors(
   limit?: number,
@@ -90,7 +90,7 @@ export async function getServicesByDoctor(
   `;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       price: row.price != null ? parseFloat(row.price) : 0.0,
     }));
@@ -111,7 +111,7 @@ export async function getServicesByDoctorAndSpecialization(
   `;
   try {
     const result = await pool.query(query, [doctorId, specializationId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       price: row.price != null ? parseFloat(row.price) : 0.0,
     }));
@@ -126,7 +126,7 @@ export async function getAvailabilitiesByDoctor(
   const query = `SELECT id, available_datetime FROM Availabilities WHERE doctor_id = $1 ORDER BY available_datetime;`;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       available_datetime: row.available_datetime.toISOString(),
     }));
@@ -141,7 +141,7 @@ export async function getAppointmentsByDoctor(
   const query = `SELECT * FROM Appointments WHERE doctor_id = $1 ORDER BY appointment_datetime DESC;`;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       datetime: row.appointment_datetime.toISOString(),
     }));
@@ -159,7 +159,7 @@ export async function getPatientsByDoctor(doctorId: string): Promise<Pet[]> {
   `;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       weight: parseFloat(row.weight),
     }));
@@ -334,10 +334,10 @@ export async function updateDoctorSpecialization(
       [doctorId, specializationId]
     );
     const currentDbServiceIds = new Set(
-      currentDbServicesResult.rows.map((r) => r.service_id)
+      currentDbServicesResult.rows.map((r: any) => r.service_id)
     );
     const incomingServiceIds = new Set(
-      services.map((s) => s.id).filter(Boolean)
+      services.map((s: any) => s.id).filter(Boolean)
     );
 
     const serviceIdsToDelete = [...currentDbServiceIds].filter(

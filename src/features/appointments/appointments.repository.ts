@@ -1,23 +1,23 @@
 import { PoolClient } from "pg";
-import pool from "../core/config/db";
+import pool from "../../core/config/db";
 import {
   ActiveTreatmentInput,
   CreateAppointmentInput,
   LifelongConditionInput,
   RemoveAppointmentInput,
   UpdateAppointmentInput,
-} from "../graphql/types";
-import { Appointment } from "../types";
-import { addDoctorAvailability } from "./doctors";
-import { formatAppointmentRow } from "./helpers";
-import { ClientError } from "../errors/ClientError";
-import { SystemError } from "../errors/SystemError";
+} from "../../schema/resolvers.types";
+import { Appointment } from "../../types";
+import { addDoctorAvailability } from "../doctors/doctors.repository";
+import { formatAppointmentRow } from "./appointments.helpers";
+import { ClientError } from "../../errors/ClientError";
+import { SystemError } from "../../errors/SystemError";
 import {
   SystemErrorMessages,
   PostgresErrorCode,
   AppointmentErrorMessages,
   PetErrorMessages,
-} from "../errors/constants";
+} from "../../errors/constants";
 
 export async function getAppointmentById(
   id: string
@@ -124,7 +124,7 @@ async function syncHealthRecords(
       [petId]
     );
 
-    const existingDbIds = new Set(existingDbRecords.map((r) => r.id));
+    const existingDbIds = new Set(existingDbRecords.map((r: any) => r.id));
     const seenIds = new Set<string>();
 
     for (const record of incomingRecords) {

@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
-import pool from "../core/config/db";
-import { Doctor, Specialization, Service } from "../types";
+import pool from "../../core/config/db";
+import { Doctor, Specialization, Service } from "../../types";
 
 async function batchDoctors(
   ids: readonly string[]

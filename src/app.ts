@@ -15,10 +15,10 @@ import authenticationRoutes from "./features/authentication/authentication.route
 import registrationRoutes from "./features/registration/registration.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
 
-import { resolvers } from "./graphql/resolvers";
-import { createDoctorLoaders } from "./loaders/doctorLoaders";
-import { createPetLoaders } from "./loaders/petLoaders";
-import { createOwnerLoaders } from "./loaders/ownerLoaders";
+import { resolvers } from "./schema/resolvers";
+import { createDoctorLoaders } from "./features/doctors/doctors.loaders";
+import { createPetLoaders } from "./features/pets/pets.loaders";
+import { createOwnerLoaders } from "./features/owners/owners.loaders";
 
 dotenv.config();
 
@@ -42,7 +42,7 @@ app.use("/api/auth", registrationRoutes);
 
 const startServer = async () => {
   const typeDefs = readFileSync(
-    path.join(__dirname, "graphql/typeDefs.graphql"),
+    path.join(__dirname, "schema/typeDefs.graphql"),
     { encoding: "utf-8" }
   );
 

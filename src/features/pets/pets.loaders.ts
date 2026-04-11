@@ -1,18 +1,18 @@
 import DataLoader from "dataloader";
-import pool from "../core/config/db";
+import pool from "../../core/config/db";
 import {
   ActiveTreatment,
   Appointment,
   LifelongCondition,
   Owner,
   Pet,
-} from "../types";
+} from "../../types";
 
 async function batchPets(ids: readonly string[]): Promise<(Pet | null)[]> {
   const query = `SELECT * FROM Pets WHERE id = ANY($1);`;
   const result = await pool.query(query, [ids]);
 
-  const petMap = new Map(result.rows.map((pet) => [pet.id, pet]));
+  const petMap = new Map(result.rows.map((pet: any) => [pet.id, pet]));
   return ids.map((id) => petMap.get(id) || null);
 }
 

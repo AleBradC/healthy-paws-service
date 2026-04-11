@@ -1,9 +1,9 @@
-import pool from "../core/config/db";
-import { UpdateOwnerProfileInput } from "../graphql/types";
-import { Owner, Pet } from "../types";
-import { ClientError } from "../errors/ClientError";
-import { SystemError } from "../errors/SystemError";
-import { OwnerErrorMessages, SystemErrorMessages } from "../errors/constants";
+import pool from "../../core/config/db";
+import { UpdateOwnerProfileInput } from "../../schema/resolvers.types";
+import { Owner, Pet } from "../../types";
+import { ClientError } from "../../errors/ClientError";
+import { SystemError } from "../../errors/SystemError";
+import { OwnerErrorMessages, SystemErrorMessages } from "../../errors/constants";
 
 export async function getAllOwners(): Promise<Owner[]> {
   const query = `SELECT * FROM Owners;`;
@@ -39,7 +39,7 @@ export async function getPetsByOwner(ownerId: string): Promise<Pet[]> {
   const query = `SELECT id, name, type, breed, age, weight, owner_id FROM Pets WHERE owner_id = $1;`;
   try {
     const result = await pool.query(query, [ownerId]);
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       weight: parseFloat(row.weight),
     }));
