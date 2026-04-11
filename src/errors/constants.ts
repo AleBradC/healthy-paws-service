@@ -29,3 +29,39 @@ export enum SuccessMessages {
   OWNER_REGISTERED = "Pet owner registered successfully.",
   DOCTOR_REGISTERED = "Doctor registered successfully.",
 }
+
+// --- GraphQL Error Constants ---
+
+export enum PostgresErrorCode {
+  UNIQUE_VIOLATION = "23505",
+  FOREIGN_KEY_VIOLATION = "23503",
+  CHECK_VIOLATION = "23514",
+  NOT_NULL_VIOLATION = "23502",
+  EXCLUSION_VIOLATION = "23P01",
+}
+
+export enum AppointmentErrorMessages {
+  APPOINTMENT_NOT_FOUND = "Appointment not found.",
+  APPOINTMENT_SLOT_TAKEN = "This appointment slot is no longer available. Please select a different time.",
+}
+
+export enum PetErrorMessages {
+  PET_NOT_FOUND = "Pet not found.",
+  CONDITION_ALREADY_EXISTS = 'The condition "{condition}" already exists for this patient.',
+}
+
+export enum OwnerErrorMessages {
+  OWNER_NOT_FOUND = "Owner not found.",
+  OWNER_PROFILE_NOT_FOUND = "Owner profile not found.",
+}
+
+export enum DoctorErrorMessages {
+  DOCTOR_NOT_FOUND = "Doctor not found.",
+  DOCTOR_PROFILE_NOT_FOUND = "Doctor profile not found.",
+  DOCTOR_SPECIALIZATION_DELETE_FAIL = "Failed to delete: Doctor is not associated with this specialization.",
+  DOCTOR_AVAILABILITY_DELETE_FAIL = "Failed to delete: Doctor is not associated with this availability.",
+}
+
+export enum GenericErrorMessages {
+  INTERNAL_SERVER_ERROR = "An internal server error occurred. Please try again later.",
+}

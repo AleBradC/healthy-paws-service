@@ -179,3 +179,94 @@ export interface PasswordResetTokenData {
 export type PasswordResetTokens = {
   [token: string]: PasswordResetTokenData;
 };
+
+// --- GRAPHQL ENTITY TYPES ---
+
+export interface User {
+  id: string;
+  email: string;
+  hash?: string;
+  salt?: string;
+  role: "owner" | "doctor";
+}
+
+export interface Owner {
+  id: string;
+  user_id: string;
+  name: string;
+  email?: string;
+  pets?: Pet[];
+  appointments?: Appointment[];
+}
+
+export interface Doctor {
+  id: string;
+  user_id: string;
+  name: string;
+  email?: string;
+  clinic_name?: string;
+  clinic_address?: string;
+  specializations?: Specialization[];
+  availabilities?: Availability[];
+  appointments?: Appointment[];
+  patients?: Pet[];
+}
+
+export interface Pet {
+  id: string;
+  name: string;
+  owner?: Owner;
+  type?: string;
+  breed?: string;
+  age?: number;
+  weight?: number;
+  lifelong_conditions?: LifelongCondition[];
+  active_treatments?: ActiveTreatment[];
+  appointments?: Appointment[];
+}
+
+export interface Appointment {
+  id: string;
+  doctor_id: string;
+  pet_id: string;
+  datetime: string;
+  patient?: Pet;
+  doctor?: Doctor;
+  status?: "Confirmed" | "Upcoming" | "Completed" | "Cancelled" | string;
+  reason?: string;
+  consultation_type?: string;
+  investigation?: string;
+  investigation_result?: string;
+}
+
+export interface Specialization {
+  id: string;
+  name: string;
+  services?: Service[];
+}
+
+export interface Service {
+  id: string;
+  specialization_id: string;
+  name: string;
+  price: number;
+}
+
+export interface Availability {
+  id: string;
+  available_datetime: string;
+}
+
+export interface LifelongCondition {
+  id: string;
+  condition: string;
+  treatment: string;
+}
+
+export interface ActiveTreatment {
+  id: string;
+  condition: string;
+  treatment: string;
+  start_date: string;
+  end_date?: string;
+}

@@ -1,0 +1,268 @@
+# ==================================================================
+# Enums
+# ==================================================================
+enum AppointmentStatus {
+  Confirmed
+  Upcoming
+  Completed
+  Cancelled
+}
+
+enum UserRole {
+  owner
+  doctor
+}
+
+# ==================================================================
+# Core Object Types
+# ==================================================================
+type User {
+  id: ID!
+  email: String!
+  hash: String!
+  salt: String!
+  role: UserRole!
+}
+
+type Owner {
+  id: ID!
+  name: String!
+  email: String
+  pets: [Pet!]
+  appointments: [Appointment!]
+}
+
+type Doctor {
+  id: ID!
+  name: String!
+  email: String
+  clinic_name: String
+  clinic_address: String
+  specializations: [Specialization!]
+  availabilities: [Availability!]
+  appointments: [Appointment!]
+  patients: [Pet!]
+}
+
+type DoctorsSubList {
+  items: [Doctor!]!
+  totalCount: Int!
+}
+
+type Pet {
+  id: ID!
+  name: String!
+  owner: Owner
+  type: String
+  breed: String
+  age: Int
+  weight: Float
+  lifelong_conditions: [LifelongCondition!]
+  active_treatments: [ActiveTreatment!]
+  appointments: [Appointment!]
+}
+
+type Appointment {
+  id: ID!
+  datetime: String!
+  patient: Pet
+  doctor: Doctor
+  status: AppointmentStatus
+  reason: String
+  consultation_type: String
+  investigation: String
+  investigation_result: String
+}
+
+type Specialization {
+  id: ID!
+  name: String!
+  services: [Service!]
+}
+
+type Service {
+  id: ID!
+  specialization_id: ID!
+  name: String!
+  price: Float!
+}
+
+type Availability {
+  id: ID!
+  available_datetime: String!
+}
+
+type LifelongCondition {
+  id: ID!
+  condition: String!
+  treatment: String!
+}
+
+type ActiveTreatment {
+  id: ID!
+  condition: String!
+  treatment: String!
+  start_date: String!
+  end_date: String
+}
+
+# ==================================================================
+# Query Type
+# ==================================================================
+type Query {
+  doctors(limit: Int, skip: Int): DoctorsSubList!
+  doctor(id: ID!): Doctor
+
+  owners: [Owner!]
+  owner(id: ID!): Owner
+
+  pet(id: ID!): Pet
+  appointment(id: ID!): Appointment
+}
+
+# ==================================================================
+# Mutation Type
+# ==================================================================
+type Mutation {
+  # --- Appointment Mutations ---
+  createAppointment(input: CreateAppointmentInput!): Appointment
+  updateAppointment(input: UpdateAppointmentInput!): Appointment
+  removeAppointment(input: RemoveAppointmentInput!): Appointment
+
+  # --- Pet Mutations ---
+  createPet(input: CreatePetInput!): Pet
+  updatePet(input: UpdatePetInput!): Pet
+  # --- Doctor Profile & Services Mutations ---
+  updateDoctorProfile(input: UpdateDoctorProfileInput!): Doctor
+  addDoctorSpecialization(input: AddDoctorSpecializationInput!): Doctor
+  removeDoctorSpecialization(input: RemoveDoctorSpecializationInput!): Doctor
+  updateDoctorSpecialization(input: UpdateDoctorSpecializationInput!): Doctor
+  addDoctorAvailability(input: AddDoctorAvailabilityInput!): Doctor
+  removeDoctorAvailability(input: RemoveDoctorAvailabilityInput!): Doctor
+
+  # --- Owner Profile Mutations ---
+  updateOwnerProfile(input: UpdateOwnerProfileInput!): Owner
+}
+
+# ==================================================================
+# Input Types
+# ==================================================================
+
+# --- Appointment Inputs ---
+input CreateAppointmentInput {
+  petId: ID!
+  doctorId: ID!
+  appointmentDatetime: String!
+  status: AppointmentStatus!
+  consultationType: String!
+}
+
+input UpdateAppointmentInput {
+  appointmentId: ID!
+  status: String
+  reason: String
+  consultationType: String
+  investigation: String
+  investigationResult: String
+  patientDetails: AppointmentPetDetailsInput
+  lifelongConditions: [LifelongConditionInput!]
+  activeTreatments: [ActiveTreatmentInput!]
+}
+
+input RemoveAppointmentInput {
+  appointmentId: ID!
+}
+
+# --- Nested Inputs for UpdateAppointment ---
+input AppointmentPetDetailsInput {
+  name: String
+  type: String
+  breed: String
+  age: Int
+  weight: Float
+}
+
+input LifelongConditionInput {
+  id: ID
+  condition: String!
+  treatment: String!
+}
+
+input ActiveTreatmentInput {
+  id: ID
+  condition: String!
+  treatment: String!
+  start_date: String!
+  end_date: String
+}
+
+# --- Pet Inputs ---
+input CreatePetInput {
+  ownerId: ID!
+  name: String!
+  type: String!
+  breed: String!
+  age: Int!
+  weight: Float!
+}
+
+input UpdatePetInput {
+  petId: ID!
+  name: String
+  type: String
+  breed: String
+  age: Int
+  weight: Float
+}
+
+# --- Doctor Inputs ---
+input UpdateDoctorProfileInput {
+  doctorId: ID!
+  name: String
+  clinicName: String
+  clinicAddress: String
+}
+
+input AddDoctorSpecializationInput {
+  doctorId: ID!
+  specializationName: String!
+  services: [ServiceInput!]!
+}
+
+input RemoveDoctorSpecializationInput {
+  doctorId: ID!
+  specializationId: ID!
+}
+
+input UpdateDoctorSpecializationInput {
+  doctorId: ID!
+  specializationId: ID!
+  services: [ServiceUpdateInput!]!
+}
+
+input ServiceInput {
+  name: String!
+  price: Float!
+}
+
+input ServiceUpdateInput {
+  id: ID
+  name: String!
+  price: Float!
+}
+
+input AddDoctorAvailabilityInput {
+  doctorId: ID!
+  availabilities: [String!]!
+}
+
+input RemoveDoctorAvailabilityInput {
+  doctorId: ID!
+  availabilityId: ID!
+}
+
+# --- Owner Inputs ---
+input UpdateOwnerProfileInput {
+  ownerId: ID!
+  name: String
+}
