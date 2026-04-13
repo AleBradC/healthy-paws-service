@@ -75,14 +75,22 @@ export const doctorsResolvers = {
   },
 
   Specialization: {
-    services: (
+    services: async (
       specialization: Specialization & { doctorId: string },
       _args: any,
       context: GraphQLContext
-    ) =>
-      context.doctorLoaders.servicesByDoctorAndSpecialization.load({
+    ) => {
+      const services = await context.doctorLoaders.servicesByDoctorAndSpecialization.load(
+        {
         doctorId: specialization.doctorId,
         specializationId: specialization.id,
-      }),
+        }
+      );
+
+      return services.map((service: any) => ({
+        ...service,
+        specialization_id: service.specialization_id ?? specialization.id,
+      }));
+    },
   },
 };

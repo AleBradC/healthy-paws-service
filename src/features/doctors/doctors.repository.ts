@@ -23,7 +23,18 @@ export async function getAllDoctors(
   limit?: number,
   skip?: number
 ): Promise<Doctor[]> {
-  const query = `SELECT * FROM Doctors ORDER BY name ASC OFFSET $1 LIMIT $2;`;
+  const query = `
+    SELECT *
+    FROM Doctors d
+    WHERE EXISTS (
+      SELECT 1
+      FROM Doctor_Specializations ds
+      JOIN Specializations s ON s.id = ds.specialization_id
+      WHERE ds.doctor_id = d.id
+    )
+    ORDER BY d.name ASC
+    OFFSET $1 LIMIT $2;
+  `;
   try {
     const result = await pool.query(query, [skip, limit]);
     return result.rows;
@@ -33,7 +44,16 @@ export async function getAllDoctors(
 }
 
 export async function getDoctorsTotalCount(): Promise<number> {
-  const query = `SELECT COUNT(*) FROM Doctors;`;
+  const query = `
+    SELECT COUNT(*)
+    FROM Doctors d
+    WHERE EXISTS (
+      SELECT 1
+      FROM Doctor_Specializations ds
+      JOIN Specializations s ON s.id = ds.specialization_id
+      WHERE ds.doctor_id = d.id
+    );
+  `;
   try {
     const result = await pool.query(query);
     return parseInt(result.rows[0].count, 10);
