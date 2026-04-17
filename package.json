@@ -41,7 +41,7 @@
     "@apollo/server": "^5.5.0",
     "@as-integrations/express5": "^1.1.2",
     "bcrypt": "^6.0.0",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dataloader": "^2.2.3",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
