@@ -24,7 +24,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/express-session": "^1.18.2",
+    "@types/express-session": "^1.19.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.4",
@@ -45,7 +45,7 @@
     "dataloader": "^2.2.3",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "express-session": "^1.18.2",
+    "express-session": "^1.19.0",
     "graphql": "^16.13.2",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.5",
