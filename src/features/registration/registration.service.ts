@@ -1,4 +1,3 @@
-import * as crypto from "crypto";
 import { RegistrationRepository } from "./registration.repository";
 import { ROLES } from "../../constants";
 import { hashPassword } from "../../helpers";
@@ -29,13 +28,12 @@ export class RegistrationService {
         throw new ClientError(ClientErrorMessages.ACCOUNT_EXISTS, 409);
       }
 
-      const salt = crypto.randomBytes(16).toString("hex");
-      const hash = hashPassword(payload.owner.password!, salt);
+      const hash = await hashPassword(payload.owner.password!);
 
       return await this.registrationRepository.createOwnerAndPet({
         email: payload.owner.email,
         hash,
-        salt,
+        salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.OWNER_ROLE,
         ownerName: payload.owner.name,
         petData: payload.pet,
@@ -60,13 +58,12 @@ export class RegistrationService {
         throw new ClientError(ClientErrorMessages.ACCOUNT_EXISTS, 409);
       }
 
-      const salt = crypto.randomBytes(16).toString("hex");
-      const hash = hashPassword(payload.doctor.password!, salt);
+      const hash = await hashPassword(payload.doctor.password!);
 
       return await this.registrationRepository.createDoctorWithDetails({
         email: payload.doctor.email,
         hash,
-        salt,
+        salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.DOCTOR_ROLE,
         doctorData: payload.doctor,
       });

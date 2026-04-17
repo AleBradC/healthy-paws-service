@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
 import * as dotenv from "dotenv";
 import nodemailer from "nodemailer";
@@ -48,8 +49,8 @@ export class AuthenticationService {
         return null;
       }
 
-      const calculatedHash = hashPassword(password, user.password_salt);
-      if (calculatedHash === user.password_hash) {
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (isMatch) {
         return { id: user.id, email: user.email, role: user.role };
       }
 
@@ -90,7 +91,7 @@ export class AuthenticationService {
         throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
       }
 
-      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const resetCode = crypto.randomInt(100000, 999999).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
       await this.authenticationRepository.createResetToken(
@@ -173,14 +174,13 @@ export class AuthenticationService {
       throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
     }
 
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hashedPassword = hashPassword(newPassword, salt);
+    const hashedPassword = await hashPassword(newPassword);
 
     try {
       await this.authenticationRepository.updateUserPassword(
         user.id,
         hashedPassword,
-        salt
+        "" // bcrypt salt is embedded in the hash
       );
       await this.authenticationRepository.markResetTokenUsed(token.id);
     } catch (err) {

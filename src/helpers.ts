@@ -1,5 +1,5 @@
-import * as crypto from "crypto";
+import * as bcrypt from "bcrypt";
 
-export const hashPassword = (password: string, salt: string): string => {
-  return crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+export const hashPassword = async (password: string, saltRounds = 10): Promise<string> => {
+  return await bcrypt.hash(password, saltRounds);
 };

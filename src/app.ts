@@ -8,6 +8,7 @@ import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { readFileSync } from "fs";
 import path from "path";
+import * as jwt from "jsonwebtoken";
 
 import pool from "./core/config/db";
 import { passport } from "./core/middleware/passport-config";
@@ -28,7 +29,7 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"] : ["http://localhost:5173", "http://localhost:3000"],
     credentials: true,
   })
 );
@@ -63,12 +64,25 @@ const startServer = async () => {
     app.use(
       "/graphql",
       expressMiddleware(server, {
-        context: async () => ({
-          db: pool,
-          doctorLoaders: createDoctorLoaders(),
-          petLoaders: createPetLoaders(),
-          ownerLoaders: createOwnerLoaders(),
-        }),
+        context: async ({ req }) => {
+          let user = null;
+          const authHeader = req.headers.authorization;
+          if (authHeader && authHeader.startsWith("Bearer ")) {
+            const token = authHeader.substring(7);
+            try {
+              user = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+            } catch (err) {
+              // invalid token
+            }
+          }
+          return {
+            db: pool,
+            user,
+            doctorLoaders: createDoctorLoaders(),
+            petLoaders: createPetLoaders(),
+            ownerLoaders: createOwnerLoaders(),
+          };
+        },
       })
     );
 

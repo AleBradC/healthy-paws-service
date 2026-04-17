@@ -34,6 +34,7 @@ export interface OwnerLoaders {
 
 export interface GraphQLContext {
   db: Pool;
+  user?: import("../types").JwtPayload | null;
   doctorLoaders: DoctorLoaders;
   petLoaders: PetLoaders;
   ownerLoaders: OwnerLoaders;
