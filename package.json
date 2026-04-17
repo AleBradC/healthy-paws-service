@@ -23,7 +23,7 @@
   "homepage": "https://github.com/AleBradC/healthy-paws-service#readme",
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
+    "@types/express": "^5.0.6",
     "@types/express-session": "^1.18.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
@@ -44,7 +44,7 @@
     "cors": "^2.8.5",
     "dataloader": "^2.2.3",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "express-session": "^1.18.2",
     "graphql": "^16.13.2",
     "jsonwebtoken": "^9.0.2",
