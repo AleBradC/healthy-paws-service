@@ -54,9 +54,21 @@ const startServer = async () => {
   });
 
   try {
-    const dataBase = await pool.connect();
-    console.log("Successfully connected to the database.");
-    dataBase.release();
+    let dataBase;
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        dataBase = await pool.connect();
+        console.log("Successfully connected to the database.");
+        break;
+      } catch (err) {
+        console.log(`Failed to connect to DB, retrying... (${retries} attempts left)`);
+        retries -= 1;
+        if (retries === 0) throw err;
+        await new Promise(res => setTimeout(res, 3000));
+      }
+    }
+    if (dataBase) dataBase.release();
 
     await server.start();
 

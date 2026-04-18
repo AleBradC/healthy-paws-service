@@ -1,4 +1,3 @@
-CREATE DATABASE healthyPaws;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Core entity tables for users and their roles
