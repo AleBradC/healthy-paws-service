@@ -27,10 +27,11 @@ describe("authorizationUtils", () => {
     it("should throw FORBIDDEN error if roleId does not match doctorId", async () => {
       try {
         await verifyDoctorOwnership("doc-1", "doc-2");
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(GraphQLError);
-        expect(error.message).toBe("You do not have permission to modify this doctor profile.");
-        expect(error.extensions.code).toBe("FORBIDDEN");
+      } catch (error) {
+        const gqlError = error as GraphQLError;
+        expect(gqlError).toBeInstanceOf(GraphQLError);
+        expect(gqlError.message).toBe("You do not have permission to modify this doctor profile.");
+        expect(gqlError.extensions.code).toBe("FORBIDDEN");
       }
     });
   });
@@ -43,10 +44,11 @@ describe("authorizationUtils", () => {
     it("should throw FORBIDDEN error if roleId does not match ownerId", async () => {
       try {
         await verifyOwnerOwnership("owner-1", "owner-2");
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(GraphQLError);
-        expect(error.message).toBe("You do not have permission to modify this owner profile.");
-        expect(error.extensions.code).toBe("FORBIDDEN");
+      } catch (error) {
+        const gqlError = error as GraphQLError;
+        expect(gqlError).toBeInstanceOf(GraphQLError);
+        expect(gqlError.message).toBe("You do not have permission to modify this owner profile.");
+        expect(gqlError.extensions.code).toBe("FORBIDDEN");
       }
     });
   });
@@ -65,10 +67,11 @@ describe("authorizationUtils", () => {
       vi.mocked(pool.query).mockResolvedValue({ rowCount: 0, rows: [] } as any);
       try {
         await verifyPetOwnership("owner-1", "pet-2");
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(GraphQLError);
-        expect(error.message).toBe("You do not have permission to modify this pet record.");
-        expect(error.extensions.code).toBe("FORBIDDEN");
+      } catch (error) {
+        const gqlError = error as GraphQLError;
+        expect(gqlError).toBeInstanceOf(GraphQLError);
+        expect(gqlError.message).toBe("You do not have permission to modify this pet record.");
+        expect(gqlError.extensions.code).toBe("FORBIDDEN");
       }
     });
   });
@@ -96,10 +99,11 @@ describe("authorizationUtils", () => {
       vi.mocked(pool.query).mockResolvedValue({ rowCount: 0, rows: [] } as any);
       try {
         await verifyAppointmentOwnership("user-1", "owner", "appt-2");
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(GraphQLError);
-        expect(error.message).toBe("You do not have permission to access or modify this appointment.");
-        expect(error.extensions.code).toBe("FORBIDDEN");
+      } catch (error) {
+        const gqlError = error as GraphQLError;
+        expect(gqlError).toBeInstanceOf(GraphQLError);
+        expect(gqlError.message).toBe("You do not have permission to access or modify this appointment.");
+        expect(gqlError.extensions.code).toBe("FORBIDDEN");
       }
     });
   });

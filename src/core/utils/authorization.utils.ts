@@ -48,7 +48,7 @@ export async function verifyPetOwnership(roleId: string, petId: string): Promise
  * Verifies that an appointment belongs to the user (either the doctor or the owner of the pet).
  */
 export async function verifyAppointmentOwnership(roleId: string, role: string, appointmentId: string): Promise<void> {
-  let query = "";
+  let query: string;
   if (role === 'doctor') {
     query = `
       SELECT 1 

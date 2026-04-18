@@ -16,13 +16,13 @@ vi.mock("./appointments.repository", () => ({
 }));
 
 describe("appointmentsResolvers", () => {
-  let mockContext: any;
+  let mockContext: GraphQLContext;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockContext = {
       user: { id: "user-1", role: "owner" },
-    };
+    } as unknown as GraphQLContext;
   });
 
   describe("Query.appointment", () => {
