@@ -6,6 +6,7 @@ import {
 } from "./appointments.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Appointment } from "../../types";
+import { verifyAppointmentOwnership, verifyPetOwnership } from "../../core/utils/authorization.utils";
 import {
   GetByIdArgs,
   CreateAppointmentArgs,
@@ -15,16 +16,29 @@ import {
 
 export const appointmentsResolvers = {
   Query: {
-    appointment: (_: any, { id }: GetByIdArgs) => getAppointmentById(id),
+    appointment: async (_: any, { id }: GetByIdArgs, context: GraphQLContext) => {
+      await verifyAppointmentOwnership(
+        context.user!.id,
+        context.user!.role,
+        id
+      );
+      return getAppointmentById(id);
+    },
   },
 
   Mutation: {
-    createAppointment: (_: any, { input }: CreateAppointmentArgs) =>
-      createAppointment(input),
-    updateAppointment: (_: any, { input }: UpdateAppointmentArgs) =>
-      updateAppointment(input),
-    removeAppointment: (_: any, { input }: RemoveAppointmentArgs) =>
-      removeAppointment(input),
+    createAppointment: async (_: any, { input }: CreateAppointmentArgs, context: GraphQLContext) => {
+      await verifyPetOwnership(context.user!.id, input.petId);
+      return createAppointment(input);
+    },
+    updateAppointment: async (_: any, { input }: UpdateAppointmentArgs, context: GraphQLContext) => {
+      await verifyAppointmentOwnership(context.user!.id, context.user!.role, input.appointmentId);
+      return updateAppointment(input);
+    },
+    removeAppointment: async (_: any, { input }: RemoveAppointmentArgs, context: GraphQLContext) => {
+      await verifyAppointmentOwnership(context.user!.id, context.user!.role, input.appointmentId);
+      return removeAppointment(input);
+    },
   },
 
   Appointment: {

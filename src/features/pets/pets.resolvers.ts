@@ -1,6 +1,7 @@
 import { createPet, updatePet } from "./pets.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Pet } from "../../types";
+import { verifyPetOwnership, verifyOwnerOwnership } from "../../core/utils/authorization.utils";
 import {
   GetByIdArgs,
   CreatePetArgs,
@@ -9,13 +10,21 @@ import {
 
 export const petsResolvers = {
   Query: {
-    pet: (_: any, { id }: GetByIdArgs, context: GraphQLContext) =>
-      context.petLoaders.petById.load(id),
+    pet: async (_: any, { id }: GetByIdArgs, context: GraphQLContext) => {
+      await verifyPetOwnership(context.user!.id, id);
+      return context.petLoaders.petById.load(id);
+    },
   },
 
   Mutation: {
-    createPet: (_: any, { input }: CreatePetArgs) => createPet(input),
-    updatePet: (_: any, { input }: UpdatePetArgs) => updatePet(input),
+    createPet: async (_: any, { input }: CreatePetArgs, context: GraphQLContext) => {
+      await verifyOwnerOwnership(context.user!.id, input.ownerId);
+      return createPet(input);
+    },
+    updatePet: async (_: any, { input }: UpdatePetArgs, context: GraphQLContext) => {
+      await verifyPetOwnership(context.user!.id, input.petId);
+      return updatePet(input);
+    },
   },
 
   Pet: {

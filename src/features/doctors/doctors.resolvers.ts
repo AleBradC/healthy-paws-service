@@ -14,6 +14,7 @@ import {
 } from "./doctors.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Doctor, Specialization } from "../../types";
+import { verifyDoctorOwnership } from "../../core/utils/authorization.utils";
 import {
   GetByIdArgs,
   UpdateDoctorProfileArgs,
@@ -37,24 +38,42 @@ export const doctorsResolvers = {
   },
 
   Mutation: {
-    updateDoctorProfile: (_: any, { input }: UpdateDoctorProfileArgs) =>
-      updateDoctorProfile(input),
-    addDoctorSpecialization: (_: any, { input }: AddDoctorSpecializationArgs) =>
-      addDoctorSpecialization(input),
-    removeDoctorSpecialization: (
+    updateDoctorProfile: async (_: any, { input }: UpdateDoctorProfileArgs, context: GraphQLContext) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return updateDoctorProfile(input);
+    },
+    addDoctorSpecialization: async (_: any, { input }: AddDoctorSpecializationArgs, context: GraphQLContext) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return addDoctorSpecialization(input);
+    },
+    removeDoctorSpecialization: async (
       _: any,
-      { input }: RemoveDoctorSpecializationArgs
-    ) => removeDoctorSpecialization(input),
-    updateDoctorSpecialization: (
+      { input }: RemoveDoctorSpecializationArgs,
+      context: GraphQLContext
+    ) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return removeDoctorSpecialization(input);
+    },
+    updateDoctorSpecialization: async (
       _: any,
-      { input }: UpdateDoctorSpecializationArgs
-    ) => updateDoctorSpecialization(input),
-    addDoctorAvailability: (_: any, { input }: AddDoctorAvailabilityArgs) =>
-      addDoctorAvailability(input),
-    removeDoctorAvailability: (
+      { input }: UpdateDoctorSpecializationArgs,
+      context: GraphQLContext
+    ) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return updateDoctorSpecialization(input);
+    },
+    addDoctorAvailability: async (_: any, { input }: AddDoctorAvailabilityArgs, context: GraphQLContext) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return addDoctorAvailability(input);
+    },
+    removeDoctorAvailability: async (
       _: any,
-      { input }: RemoveDoctorAvailabilityArgs
-    ) => removeDoctorAvailability(input),
+      { input }: RemoveDoctorAvailabilityArgs,
+      context: GraphQLContext
+    ) => {
+      await verifyDoctorOwnership(context.user!.id, input.doctorId);
+      return removeDoctorAvailability(input);
+    },
   },
 
   Doctor: {
