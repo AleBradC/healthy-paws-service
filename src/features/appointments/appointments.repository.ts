@@ -36,6 +36,7 @@ export async function createAppointment(
 ): Promise<Appointment | null> {
   const { petId, doctorId, consultationType } = input;
   const appointmentDatetime = new Date(input.appointmentDatetime).toISOString();
+  // New appointments start as Pending for Approval
   const status = "Pending";
 
   const client = await pool.connect();
@@ -126,7 +127,7 @@ export async function removeAppointment(
     }
     const appointmentData = appointmentResult.rows[0];
 
-    // Only restore availability if it's not already cancelled or declined
+    // Restore availability if it's not already terminal
     const isCurrentlyActive = !["Cancel", "Declined"].includes(appointmentData.status);
 
     await client.query(
@@ -156,6 +157,7 @@ export async function removeAppointment(
     client.release();
   }
 }
+
 
 async function syncHealthRecords(
   client: PoolClient,

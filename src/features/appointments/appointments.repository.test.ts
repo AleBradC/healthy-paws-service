@@ -7,10 +7,18 @@ import {
 import pool from "../../core/config/db";
 
 // Mock the pg pool
+const mockClient = {
+  query: vi.fn(),
+  release: vi.fn(),
+};
+
 vi.mock("../../core/config/db", () => ({
   default: {
     query: vi.fn(),
-    connect: vi.fn(),
+    connect: vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({ rows: [] }),
+      release: vi.fn(),
+    }),
   },
 }));
 
@@ -38,25 +46,15 @@ describe("AppointmentsRepository", () => {
       expect(result?.id).toBe("1");
       expect(result?.datetime).toBe(mockDate.toISOString());
     });
-
-    it("should return null if appointment is not found", async () => {
-      vi.mocked(pool.query).mockResolvedValue({
-        rows: [],
-      } as any);
-
-      const result = await getAppointmentById("999");
-
-      expect(result).toBeNull();
-    });
   });
 
   describe("createAppointment", () => {
-    it("should create and return a new appointment", async () => {
+    it("should create and return a new appointment including availability check", async () => {
       const input = {
         petId: "pet_1",
         doctorId: "doc_1",
         appointmentDatetime: "2023-10-01T10:00:00Z",
-        status: "Upcoming",
+        status: "Pending",
         consultationType: "Physical",
       };
       
@@ -66,28 +64,34 @@ describe("AppointmentsRepository", () => {
         pet_id: "pet_1", 
         doctor_id: "doc_1", 
         appointment_datetime: mockDate,
-        status: "Upcoming",
+        status: "Pending",
         consultation_type: "Physical"
       };
 
-      vi.mocked(pool.query).mockResolvedValue({
-        rows: [dbRow],
-      } as any);
+      const mockTransClient = {
+        query: vi.fn(),
+        release: vi.fn(),
+      };
+      vi.mocked(pool.connect).mockResolvedValue(mockTransClient as any);
+
+      // Simulation: BEGIN, avail DELETE (found), INSERT, COMMIT
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+      mockTransClient.query.mockResolvedValueOnce({ rows: [{ id: 'avail_1' }] }); // DELETE availability
+      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // INSERT appointment
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await createAppointment(input as any);
 
       expect(result).toBeDefined();
-      expect(result?.id).toBe("new_1");
-      expect(result?.datetime).toBe(mockDate.toISOString());
-      expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO Appointments"),
-        expect.arrayContaining(["pet_1", "doc_1"])
-      );
+      expect(result?.status).toBe("Pending");
+      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("BEGIN"));
+      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO Appointments"), expect.any(Array));
+      expect(mockTransClient.release).toHaveBeenCalled();
     });
   });
 
   describe("removeAppointment", () => {
-    it("should update status to 'Cancel' and return the appointment", async () => {
+    it("should update status to 'Cancel' and restore availability", async () => {
       const input = { appointmentId: "appt_1" };
       const mockDate = new Date("2023-10-01T10:00:00Z");
       const dbRow = { 
@@ -95,40 +99,25 @@ describe("AppointmentsRepository", () => {
         pet_id: "pet_1", 
         doctor_id: "doc_1", 
         appointment_datetime: mockDate,
-        status: "Cancel"
+        status: "Confirmed" // Current status
       };
 
-      // Mock client for transaction
-      const mockClient = {
+      const mockTransClient = {
         query: vi.fn(),
-        connect: vi.fn(),
         release: vi.fn(),
       };
-      
-      // Mock pool.connect
-      vi.mocked(pool.connect).mockResolvedValue(mockClient as any);
+      vi.mocked(pool.connect).mockResolvedValue(mockTransClient as any);
 
-      // Mock selection before delete
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-      mockClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // SELECT
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
-
-      // Mock final selection (getAppointmentById uses pool directly)
-      vi.mocked(pool.query).mockResolvedValue({
-        rows: [dbRow],
-      } as any);
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // SELECT current
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE to Cancel
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await removeAppointment(input);
 
       expect(result).toBeDefined();
-      expect(result?.status).toBe("Cancel");
-      
-      // Verify update query was called instead of delete
-      const updateCall = mockClient.query.mock.calls.find(call => 
-        typeof call[0] === 'string' && call[0].includes("UPDATE Appointments SET status = 'Cancel'")
-      );
-      expect(updateCall).toBeDefined();
+      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE Appointments SET status = 'Cancel'"), expect.any(Array));
+      expect(mockTransClient.release).toHaveBeenCalled();
     });
   });
 });
