@@ -232,7 +232,7 @@ export interface Appointment {
   datetime: string;
   patient?: Pet;
   doctor?: Doctor;
-  status?: "Confirmed" | "Upcoming" | "Completed" | "Cancelled" | string;
+  status?: "Pending" | "Confirmed" | "Declined" | "Upcoming" | "Begin" | "Completed" | "Cancel" | string;
   reason?: string;
   consultation_type?: string;
   investigation?: string;

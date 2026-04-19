@@ -4,11 +4,11 @@
 enum AppointmentStatus {
   Pending
   Confirmed
-  Denied
+  Declined
   Upcoming
-  Start
+  Begin
   Completed
-  Cancelled
+  Cancel
 }
 
 enum UserRole {

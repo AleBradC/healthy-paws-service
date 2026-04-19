@@ -87,7 +87,7 @@ describe("AppointmentsRepository", () => {
   });
 
   describe("removeAppointment", () => {
-    it("should update status to 'Cancelled' and return the appointment", async () => {
+    it("should update status to 'Cancel' and return the appointment", async () => {
       const input = { appointmentId: "appt_1" };
       const mockDate = new Date("2023-10-01T10:00:00Z");
       const dbRow = { 
@@ -95,7 +95,7 @@ describe("AppointmentsRepository", () => {
         pet_id: "pet_1", 
         doctor_id: "doc_1", 
         appointment_datetime: mockDate,
-        status: "Cancelled"
+        status: "Cancel"
       };
 
       // Mock client for transaction
@@ -122,11 +122,11 @@ describe("AppointmentsRepository", () => {
       const result = await removeAppointment(input);
 
       expect(result).toBeDefined();
-      expect(result?.status).toBe("Cancelled");
+      expect(result?.status).toBe("Cancel");
       
       // Verify update query was called instead of delete
       const updateCall = mockClient.query.mock.calls.find(call => 
-        typeof call[0] === 'string' && call[0].includes("UPDATE Appointments SET status = 'Cancelled'")
+        typeof call[0] === 'string' && call[0].includes("UPDATE Appointments SET status = 'Cancel'")
       );
       expect(updateCall).toBeDefined();
     });
