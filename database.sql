@@ -62,18 +62,27 @@ CREATE TABLE Availabilities (
     CONSTRAINT unq_doctor_availability UNIQUE (doctor_id, available_datetime)
 );
 
+DO $$ BEGIN
+    CREATE TYPE AppointmentStatus AS ENUM ('Pending', 'Confirmed', 'Upcoming', 'Start', 'Completed', 'Denied', 'Cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE Appointments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pet_id UUID NOT NULL REFERENCES Pets(id) ON DELETE CASCADE,
     doctor_id UUID NOT NULL REFERENCES Doctors(id) ON DELETE CASCADE,
     appointment_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    status AppointmentStatus NOT NULL,
     reason TEXT,
     consultation_type TEXT,
     investigation TEXT,
-    investigation_result TEXT,
-    CONSTRAINT unq_doctor_appointment UNIQUE (doctor_id, appointment_datetime)
+    investigation_result TEXT
 );
+
+CREATE UNIQUE INDEX unq_doctor_appointment_active 
+ON Appointments (doctor_id, appointment_datetime) 
+WHERE status NOT IN ('Cancelled', 'Denied');
 
 -- Keep Specializations as a simple lookup table
 CREATE TABLE Specializations (

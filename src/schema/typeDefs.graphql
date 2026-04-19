@@ -2,10 +2,13 @@
 # Enums
 # ==================================================================
 enum AppointmentStatus {
+  Pending
   Confirmed
+  Declined
   Upcoming
+  Begin
   Completed
-  Cancelled
+  Cancel
 }
 
 enum UserRole {

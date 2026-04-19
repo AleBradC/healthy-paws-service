@@ -143,7 +143,12 @@ export async function getServicesByDoctorAndSpecialization(
 export async function getAvailabilitiesByDoctor(
   doctorId: string
 ): Promise<Availability[]> {
-  const query = `SELECT id, available_datetime FROM Availabilities WHERE doctor_id = $1 ORDER BY available_datetime;`;
+  const query = `
+    SELECT id, available_datetime 
+    FROM Availabilities 
+    WHERE doctor_id = $1 AND available_datetime >= CURRENT_TIMESTAMP
+    ORDER BY available_datetime;
+  `;
   try {
     const result = await pool.query(query, [doctorId]);
     return result.rows.map((row: any) => ({
@@ -427,11 +432,12 @@ export async function addDoctorAvailability(
     }
 
     for (const datetime of availabilities) {
+      const normalizedDatetime = new Date(datetime).toISOString();
       await client.query(
         `INSERT INTO Availabilities (doctor_id, available_datetime)
          VALUES ($1, $2)
          ON CONFLICT (doctor_id, available_datetime) DO NOTHING`,
-        [doctorId, datetime]
+        [doctorId, normalizedDatetime]
       );
     }
 

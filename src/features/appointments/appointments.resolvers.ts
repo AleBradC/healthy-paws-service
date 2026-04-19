@@ -46,5 +46,18 @@ export const appointmentsResolvers = {
       context.doctorLoaders.doctorById.load(appointment.doctor_id),
     patient: (appointment: Appointment, _args: any, context: GraphQLContext) =>
       context.petLoaders.petById.load(appointment.pet_id),
+    status: (appointment: Appointment) => {
+      if (appointment.status !== "Confirmed") return appointment.status;
+
+      const apptTime = new Date(appointment.datetime).getTime();
+      const now = new Date().getTime();
+      const diffInHours = (apptTime - now) / (1000 * 60 * 60);
+
+      if (diffInHours > 0 && diffInHours <= 2) {
+        return "Upcoming";
+      }
+
+      return appointment.status;
+    },
   },
 };

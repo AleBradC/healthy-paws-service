@@ -34,26 +34,65 @@ export async function getAppointmentById(
 export async function createAppointment(
   input: CreateAppointmentInput
 ): Promise<Appointment | null> {
-  const { petId, doctorId, appointmentDatetime, status, consultationType } =
-    input;
+  const { petId, doctorId, consultationType } = input;
+  const appointmentDatetime = new Date(input.appointmentDatetime).toISOString();
+  // New appointments start as Pending for Approval
+  const status = "Pending";
 
-  const query = `
-    INSERT INTO Appointments (pet_id, doctor_id, appointment_datetime, status, consultation_type)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING *;
-  `;
-  const values = [
-    petId,
-    doctorId,
-    appointmentDatetime,
-    status,
-    consultationType,
-  ];
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(query, values);
+    await client.query("BEGIN");
+
+    // Check if slot is available and occupy it
+    const availResult = await client.query(
+      `DELETE FROM Availabilities 
+       WHERE doctor_id = $1 AND available_datetime = $2
+       RETURNING id`,
+      [doctorId, appointmentDatetime]
+    );
+
+    if (availResult.rows.length === 0) {
+      // Check if there's an active appointment for this slot
+      const appointmentCheck = await client.query(
+        `SELECT id FROM Appointments 
+         WHERE doctor_id = $1 AND appointment_datetime = $2 
+         AND status NOT IN ('Cancel', 'Declined')`,
+        [doctorId, appointmentDatetime]
+      );
+
+      if (appointmentCheck.rows.length > 0) {
+        throw new ClientError(
+          AppointmentErrorMessages.APPOINTMENT_SLOT_TAKEN,
+          409
+        );
+      }
+
+      throw new ClientError(
+        "This appointment slot is no longer available. Please select a different time.",
+        400
+      );
+    }
+
+    const query = `
+      INSERT INTO Appointments (pet_id, doctor_id, appointment_datetime, status, consultation_type)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const values = [
+      petId,
+      doctorId,
+      appointmentDatetime,
+      status,
+      consultationType,
+    ];
+
+    const result = await client.query(query, values);
+    await client.query("COMMIT");
     return formatAppointmentRow(result.rows[0]);
   } catch (error: any) {
+    await client.query("ROLLBACK");
+    if (error instanceof ClientError) throw error;
     if (error.code === PostgresErrorCode.UNIQUE_VIOLATION) {
       throw new ClientError(
         AppointmentErrorMessages.APPOINTMENT_SLOT_TAKEN,
@@ -61,6 +100,8 @@ export async function createAppointment(
       );
     }
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, error);
+  } finally {
+    client.release();
   }
 }
 
@@ -84,21 +125,27 @@ export async function removeAppointment(
         404
       );
     }
-    const deletedAppointmentData = appointmentResult.rows[0];
+    const appointmentData = appointmentResult.rows[0];
 
-    await client.query(`DELETE FROM Appointments WHERE id = $1`, [
-      appointmentId,
-    ]);
+    // Restore availability if it's not already terminal
+    const isCurrentlyActive = !["Cancel", "Declined"].includes(appointmentData.status);
+
+    await client.query(
+      `UPDATE Appointments SET status = 'Cancel' WHERE id = $1`,
+      [appointmentId]
+    );
+
+    if (isCurrentlyActive) {
+      await addDoctorAvailability({
+        doctorId: appointmentData.doctor_id,
+        availabilities: [
+          appointmentData.appointment_datetime.toISOString(),
+        ],
+      });
+    }
+
     await client.query("COMMIT");
-
-    await addDoctorAvailability({
-      doctorId: deletedAppointmentData.doctor_id,
-      availabilities: [
-        deletedAppointmentData.appointment_datetime.toISOString(),
-      ],
-    });
-
-    return formatAppointmentRow(deletedAppointmentData);
+    return formatAppointmentRow(appointmentData);
   } catch (error) {
     await client.query("ROLLBACK");
 
@@ -110,6 +157,7 @@ export async function removeAppointment(
     client.release();
   }
 }
+
 
 async function syncHealthRecords(
   client: PoolClient,
@@ -216,7 +264,7 @@ export async function updateAppointment(
     await client.query("BEGIN");
 
     const appointmentRes = await client.query(
-      `SELECT pet_id FROM Appointments WHERE id = $1`,
+      `SELECT pet_id, doctor_id, appointment_datetime, status FROM Appointments WHERE id = $1`,
       [appointmentId]
     );
     if (appointmentRes.rows.length === 0) {
@@ -225,7 +273,7 @@ export async function updateAppointment(
         404
       );
     }
-    const { pet_id } = appointmentRes.rows[0];
+    const { pet_id, doctor_id, appointment_datetime, status: oldStatus } = appointmentRes.rows[0];
 
     if (
       status ||
@@ -251,6 +299,17 @@ export async function updateAppointment(
           investigationResult,
         ]
       );
+
+      // If status changed to Cancel or Declined, restore availability
+      const wasActive = !["Cancel", "Declined"].includes(oldStatus);
+      const isBecomingInactive = ["Cancel", "Declined"].includes(status ?? "");
+
+      if (wasActive && isBecomingInactive) {
+        await addDoctorAvailability({
+          doctorId: doctor_id,
+          availabilities: [new Date(appointment_datetime).toISOString()],
+        });
+      }
     }
 
     if (patientDetails) {
