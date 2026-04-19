@@ -34,8 +34,9 @@ export async function getAppointmentById(
 export async function createAppointment(
   input: CreateAppointmentInput
 ): Promise<Appointment | null> {
-  const { petId, doctorId, appointmentDatetime, status, consultationType } =
-    input;
+  const { petId, doctorId, consultationType } = input;
+  const appointmentDatetime = new Date(input.appointmentDatetime).toISOString();
+  const status = "Pending";
 
   const client = await pool.connect();
 
