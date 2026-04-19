@@ -19,7 +19,7 @@ export interface CreateAppointmentInput {
   petId: string;
   doctorId: string;
   appointmentDatetime: string;
-  status: "Confirmed" | "Upcoming" | "Completed" | "Cancelled";
+  status: "Pending" | "Confirmed" | "Denied" | "Upcoming" | "Completed" | "Cancelled";
   consultationType: string;
 }
 export interface CreateAppointmentArgs {
@@ -28,7 +28,7 @@ export interface CreateAppointmentArgs {
 
 export interface UpdateAppointmentInput {
   appointmentId: string;
-  status?: "Confirmed" | "Upcoming" | "Completed" | "Cancelled" | string;
+  status?: "Pending" | "Confirmed" | "Denied" | "Upcoming" | "Completed" | "Cancelled" | string;
   reason?: string;
   consultationType?: string;
   investigation?: string;

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getAppointmentById,
   createAppointment,
+  removeAppointment
 } from "./appointments.repository";
 import pool from "../../core/config/db";
 
@@ -9,7 +10,12 @@ import pool from "../../core/config/db";
 vi.mock("../../core/config/db", () => ({
   default: {
     query: vi.fn(),
+    connect: vi.fn(),
   },
+}));
+
+vi.mock("../doctors/doctors.repository", () => ({
+  addDoctorAvailability: vi.fn().mockResolvedValue({}),
 }));
 
 describe("AppointmentsRepository", () => {
@@ -77,6 +83,52 @@ describe("AppointmentsRepository", () => {
         expect.stringContaining("INSERT INTO Appointments"),
         expect.arrayContaining(["pet_1", "doc_1"])
       );
+    });
+  });
+
+  describe("removeAppointment", () => {
+    it("should update status to 'Cancelled' and return the appointment", async () => {
+      const input = { appointmentId: "appt_1" };
+      const mockDate = new Date("2023-10-01T10:00:00Z");
+      const dbRow = { 
+        id: "appt_1", 
+        pet_id: "pet_1", 
+        doctor_id: "doc_1", 
+        appointment_datetime: mockDate,
+        status: "Cancelled"
+      };
+
+      // Mock client for transaction
+      const mockClient = {
+        query: vi.fn(),
+        connect: vi.fn(),
+        release: vi.fn(),
+      };
+      
+      // Mock pool.connect
+      vi.mocked(pool.connect).mockResolvedValue(mockClient as any);
+
+      // Mock selection before delete
+      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+      mockClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // SELECT
+      mockClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE
+      mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+      // Mock final selection (getAppointmentById uses pool directly)
+      vi.mocked(pool.query).mockResolvedValue({
+        rows: [dbRow],
+      } as any);
+
+      const result = await removeAppointment(input);
+
+      expect(result).toBeDefined();
+      expect(result?.status).toBe("Cancelled");
+      
+      // Verify update query was called instead of delete
+      const updateCall = mockClient.query.mock.calls.find(call => 
+        typeof call[0] === 'string' && call[0].includes("UPDATE Appointments SET status = 'Cancelled'")
+      );
+      expect(updateCall).toBeDefined();
     });
   });
 });
