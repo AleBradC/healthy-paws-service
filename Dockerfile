@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS development
 
 WORKDIR /app
 
@@ -10,6 +10,10 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+CMD ["sh", "-c", "npm install && npm run watch"]
+
+FROM development AS builder
 RUN npm run build
 
 # Runtime stage
