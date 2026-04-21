@@ -21,42 +21,84 @@ import { DoctorErrorMessages, SystemErrorMessages } from "../../errors/constants
 
 export async function getAllDoctors(
   limit?: number,
-  skip?: number
+  skip?: number,
+  name?: string,
+  specializationId?: string
 ): Promise<Doctor[]> {
-  const query = `
+  let query = `
     SELECT *
     FROM Doctors d
     WHERE EXISTS (
       SELECT 1
       FROM Doctor_Specializations ds
-      JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
+      ${specializationId ? "AND ds.specialization_id = $" + (3 + (name ? 1 : 0)) : ""}
     )
+  `;
+  const params: unknown[] = [skip, limit];
+  const paramIndex = 3;
+
+  if (name) {
+    query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
+    params.push(`%${name}%`);
+  }
+
+  if (specializationId) {
+    params.push(specializationId);
+  }
+
+  query += `
     ORDER BY d.name ASC
     OFFSET $1 LIMIT $2;
   `;
+
   try {
-    const result = await pool.query(query, [skip, limit]);
+    const result = await pool.query(query, params);
     return result.rows;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }
 }
 
-export async function getDoctorsTotalCount(): Promise<number> {
-  const query = `
+export async function getDoctorsTotalCount(
+  name?: string,
+  specializationId?: string
+): Promise<number> {
+  let query = `
     SELECT COUNT(*)
     FROM Doctors d
     WHERE EXISTS (
       SELECT 1
       FROM Doctor_Specializations ds
-      JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
-    );
+      ${specializationId ? "AND ds.specialization_id = $" + (1 + (name ? 1 : 0)) : ""}
+    )
   `;
+  const params: unknown[] = [];
+  const paramIndex = 1;
+
+  if (name) {
+    query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
+    params.push(`%${name}%`);
+  }
+
+  if (specializationId) {
+    params.push(specializationId);
+  }
+
+  try {
+    const result = await pool.query(query, params);
+    return parseInt(result.rows[0].count, 10);
+  } catch (err) {
+    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
+  }
+}
+
+export async function getAllSpecializations(): Promise<Specialization[]> {
+  const query = `SELECT id, name FROM Specializations ORDER BY name ASC;`;
   try {
     const result = await pool.query(query);
-    return parseInt(result.rows[0].count, 10);
+    return result.rows;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }
@@ -110,10 +152,10 @@ export async function getServicesByDoctor(
   `;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row: Record<string, any>) => ({
       ...row,
       price: row.price != null ? parseFloat(row.price) : 0.0,
-    }));
+    } as Service));
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }

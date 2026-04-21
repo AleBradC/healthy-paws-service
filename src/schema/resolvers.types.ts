@@ -8,6 +8,8 @@ export interface GetByIdArgs {
 export interface GetPaginationArgs {
   limit: number;
   skip: number;
+  name?: string;
+  specializationId?: string;
 }
 
 // ==================================================================

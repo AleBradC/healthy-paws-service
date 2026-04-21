@@ -113,7 +113,8 @@ type ActiveTreatment {
 # Query Type
 # ==================================================================
 type Query {
-  doctors(limit: Int, skip: Int): DoctorsSubList!
+  doctors(limit: Int, skip: Int, name: String, specializationId: ID): DoctorsSubList!
+  specializations: [Specialization!]!
   doctor(id: ID!): Doctor
 
   owners: [Owner!]
