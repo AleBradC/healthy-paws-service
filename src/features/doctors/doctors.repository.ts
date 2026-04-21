@@ -155,7 +155,7 @@ export async function getServicesByDoctor(
     return result.rows.map((row: Record<string, any>) => ({
       ...row,
       price: row.price != null ? parseFloat(row.price) : 0.0,
-    }));
+    } as Service));
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }
