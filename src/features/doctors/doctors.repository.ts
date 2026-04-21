@@ -21,9 +21,10 @@ import { DoctorErrorMessages, SystemErrorMessages } from "../../errors/constants
 
 export async function getAllDoctors(
   limit?: number,
-  skip?: number
+  skip?: number,
+  name?: string
 ): Promise<Doctor[]> {
-  const query = `
+  let query = `
     SELECT *
     FROM Doctors d
     WHERE EXISTS (
@@ -32,19 +33,29 @@ export async function getAllDoctors(
       JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
     )
+  `;
+  const params: any[] = [skip, limit];
+
+  if (name) {
+    query += ` AND (d.name ILIKE $3 OR d.clinic_name ILIKE $3)`;
+    params.push(`%${name}%`);
+  }
+
+  query += `
     ORDER BY d.name ASC
     OFFSET $1 LIMIT $2;
   `;
+
   try {
-    const result = await pool.query(query, [skip, limit]);
+    const result = await pool.query(query, params);
     return result.rows;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }
 }
 
-export async function getDoctorsTotalCount(): Promise<number> {
-  const query = `
+export async function getDoctorsTotalCount(name?: string): Promise<number> {
+  let query = `
     SELECT COUNT(*)
     FROM Doctors d
     WHERE EXISTS (
@@ -52,10 +63,17 @@ export async function getDoctorsTotalCount(): Promise<number> {
       FROM Doctor_Specializations ds
       JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
-    );
+    )
   `;
+  const params: any[] = [];
+
+  if (name) {
+    query += ` AND (d.name ILIKE $1 OR d.clinic_name ILIKE $1)`;
+    params.push(`%${name}%`);
+  }
+
   try {
-    const result = await pool.query(query);
+    const result = await pool.query(query, params);
     return parseInt(result.rows[0].count, 10);
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);

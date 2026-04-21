@@ -28,9 +28,9 @@ import {
 
 export const doctorsResolvers = {
   Query: {
-    doctors: async (_: any, { limit, skip }: GetPaginationArgs) => {
-      const items = await getAllDoctors(limit, skip);
-      const totalCount = await getDoctorsTotalCount();
+    doctors: async (_: any, { limit, skip, name }: GetPaginationArgs) => {
+      const items = await getAllDoctors(limit, skip, name);
+      const totalCount = await getDoctorsTotalCount(name);
       return { items, totalCount };
     },
     doctor: (_: any, { id }: GetByIdArgs, context: GraphQLContext) =>
