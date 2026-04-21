@@ -35,13 +35,12 @@ export async function getAllDoctors(
       ${specializationId ? "AND ds.specialization_id = $" + (3 + (name ? 1 : 0)) : ""}
     )
   `;
-  const params: any[] = [skip, limit];
-  let paramIndex = 3;
+  const params: unknown[] = [skip, limit];
+  const paramIndex = 3;
 
   if (name) {
     query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
     params.push(`%${name}%`);
-    paramIndex++;
   }
 
   if (specializationId) {
@@ -75,13 +74,12 @@ export async function getDoctorsTotalCount(
       ${specializationId ? "AND ds.specialization_id = $" + (1 + (name ? 1 : 0)) : ""}
     )
   `;
-  const params: any[] = [];
-  let paramIndex = 1;
+  const params: unknown[] = [];
+  const paramIndex = 1;
 
   if (name) {
     query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
     params.push(`%${name}%`);
-    paramIndex++;
   }
 
   if (specializationId) {
@@ -154,7 +152,7 @@ export async function getServicesByDoctor(
   `;
   try {
     const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row: Record<string, any>) => ({
       ...row,
       price: row.price != null ? parseFloat(row.price) : 0.0,
     }));

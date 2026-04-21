@@ -116,7 +116,7 @@ describe("AppointmentsRepository", () => {
       const result = await removeAppointment(input);
 
       expect(result).toBeDefined();
-      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE Appointments SET status = 'Cancel'"), expect.any(Array));
+      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE Appointments SET status = 'Cancelled'"), expect.any(Array));
       expect(mockTransClient.release).toHaveBeenCalled();
     });
   });
