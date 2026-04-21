@@ -97,8 +97,7 @@ describe("DoctorsRepository", () => {
 
       expect(result).toEqual(mockSpecs);
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT id, name FROM Specializations"),
-        undefined
+        expect.stringContaining("SELECT id, name FROM Specializations")
       );
     });
   });
