@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getAllDoctors, getDoctorsTotalCount } from "./doctors.repository";
+import { getAllDoctors, getDoctorsTotalCount, getAllSpecializations } from "./doctors.repository";
 import pool from "../../core/config/db";
 
 vi.mock("../../core/config/db", () => ({
@@ -30,17 +30,32 @@ describe("DoctorsRepository", () => {
       );
     });
 
-    it("should fetch doctors with name filter matching doctor name or clinic name", async () => {
+    it("should fetch doctors with specialization filter", async () => {
       const mockDoctors = [{ id: "1", name: "Dr. Pop", clinic_name: "Clinic A" }];
       vi.mocked(pool.query).mockResolvedValue({ rows: mockDoctors } as any);
 
-      const searchTerm = "Pop";
-      const result = await getAllDoctors(10, 0, searchTerm);
+      const specId = "spec-1";
+      const result = await getAllDoctors(10, 0, undefined, specId);
+
+      expect(result).toEqual(mockDoctors);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining("AND ds.specialization_id = $3"),
+        [0, 10, specId]
+      );
+    });
+
+    it("should fetch doctors with both name and specialization filters", async () => {
+      const mockDoctors = [{ id: "1", name: "Dr. Pop", clinic_name: "Clinic A" }];
+      vi.mocked(pool.query).mockResolvedValue({ rows: mockDoctors } as any);
+
+      const name = "Pop";
+      const specId = "spec-1";
+      const result = await getAllDoctors(10, 0, name, specId);
 
       expect(result).toEqual(mockDoctors);
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining("AND (d.name ILIKE $3 OR d.clinic_name ILIKE $3)"),
-        [0, 10, `%${searchTerm}%`]
+        [0, 10, `%${name}%`, specId]
       );
     });
   });
@@ -58,16 +73,32 @@ describe("DoctorsRepository", () => {
       );
     });
 
-    it("should return the total count of doctors with name filter", async () => {
-      vi.mocked(pool.query).mockResolvedValue({ rows: [{ count: "3" }] } as any);
+    it("should return the total count of doctors with both name and specialization filters", async () => {
+      vi.mocked(pool.query).mockResolvedValue({ rows: [{ count: "1" }] } as any);
 
-      const searchTerm = "Clinic";
-      const result = await getDoctorsTotalCount(searchTerm);
+      const name = "Pop";
+      const specId = "spec-1";
+      const result = await getDoctorsTotalCount(name, specId);
 
-      expect(result).toBe(3);
+      expect(result).toBe(1);
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining("AND (d.name ILIKE $1 OR d.clinic_name ILIKE $1)"),
-        [`%${searchTerm}%`]
+        [`%${name}%`, specId]
+      );
+    });
+  });
+
+  describe("getAllSpecializations", () => {
+    it("should return all specializations", async () => {
+      const mockSpecs = [{ id: "s1", name: "Surgery" }];
+      vi.mocked(pool.query).mockResolvedValue({ rows: mockSpecs } as any);
+
+      const result = await getAllSpecializations();
+
+      expect(result).toEqual(mockSpecs);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT id, name FROM Specializations"),
+        undefined
       );
     });
   });

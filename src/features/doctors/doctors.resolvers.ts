@@ -11,6 +11,7 @@ import {
   getEmailDoctor,
   getPatientsByDoctor,
   getDoctorsTotalCount,
+  getAllSpecializations,
 } from "./doctors.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Doctor, Specialization } from "../../types";
@@ -28,11 +29,12 @@ import {
 
 export const doctorsResolvers = {
   Query: {
-    doctors: async (_: any, { limit, skip, name }: GetPaginationArgs) => {
-      const items = await getAllDoctors(limit, skip, name);
-      const totalCount = await getDoctorsTotalCount(name);
+    doctors: async (_: any, { limit, skip, name, specializationId }: GetPaginationArgs) => {
+      const items = await getAllDoctors(limit, skip, name, specializationId);
+      const totalCount = await getDoctorsTotalCount(name, specializationId);
       return { items, totalCount };
     },
+    specializations: () => getAllSpecializations(),
     doctor: (_: any, { id }: GetByIdArgs, context: GraphQLContext) =>
       context.doctorLoaders.doctorById.load(id),
   },

@@ -22,7 +22,8 @@ import { DoctorErrorMessages, SystemErrorMessages } from "../../errors/constants
 export async function getAllDoctors(
   limit?: number,
   skip?: number,
-  name?: string
+  name?: string,
+  specializationId?: string
 ): Promise<Doctor[]> {
   let query = `
     SELECT *
@@ -30,15 +31,21 @@ export async function getAllDoctors(
     WHERE EXISTS (
       SELECT 1
       FROM Doctor_Specializations ds
-      JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
+      ${specializationId ? "AND ds.specialization_id = $" + (3 + (name ? 1 : 0)) : ""}
     )
   `;
   const params: any[] = [skip, limit];
+  let paramIndex = 3;
 
   if (name) {
-    query += ` AND (d.name ILIKE $3 OR d.clinic_name ILIKE $3)`;
+    query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
     params.push(`%${name}%`);
+    paramIndex++;
+  }
+
+  if (specializationId) {
+    params.push(specializationId);
   }
 
   query += `
@@ -54,27 +61,46 @@ export async function getAllDoctors(
   }
 }
 
-export async function getDoctorsTotalCount(name?: string): Promise<number> {
+export async function getDoctorsTotalCount(
+  name?: string,
+  specializationId?: string
+): Promise<number> {
   let query = `
     SELECT COUNT(*)
     FROM Doctors d
     WHERE EXISTS (
       SELECT 1
       FROM Doctor_Specializations ds
-      JOIN Specializations s ON s.id = ds.specialization_id
       WHERE ds.doctor_id = d.id
+      ${specializationId ? "AND ds.specialization_id = $" + (1 + (name ? 1 : 0)) : ""}
     )
   `;
   const params: any[] = [];
+  let paramIndex = 1;
 
   if (name) {
-    query += ` AND (d.name ILIKE $1 OR d.clinic_name ILIKE $1)`;
+    query += ` AND (d.name ILIKE $${paramIndex} OR d.clinic_name ILIKE $${paramIndex})`;
     params.push(`%${name}%`);
+    paramIndex++;
+  }
+
+  if (specializationId) {
+    params.push(specializationId);
   }
 
   try {
     const result = await pool.query(query, params);
     return parseInt(result.rows[0].count, 10);
+  } catch (err) {
+    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
+  }
+}
+
+export async function getAllSpecializations(): Promise<Specialization[]> {
+  const query = `SELECT id, name FROM Specializations ORDER BY name ASC;`;
+  try {
+    const result = await pool.query(query);
+    return result.rows;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
   }
