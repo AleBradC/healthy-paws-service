@@ -57,7 +57,7 @@ export async function createAppointment(
       const appointmentCheck = await client.query(
         `SELECT id FROM Appointments 
          WHERE doctor_id = $1 AND appointment_datetime = $2 
-         AND status NOT IN ('Cancel', 'Declined')`,
+         AND status NOT IN ('Cancelled', 'Denied')`,
         [doctorId, appointmentDatetime]
       );
 
@@ -128,10 +128,10 @@ export async function removeAppointment(
     const appointmentData = appointmentResult.rows[0];
 
     // Restore availability if it's not already terminal
-    const isCurrentlyActive = !["Cancel", "Declined"].includes(appointmentData.status);
+    const isCurrentlyActive = !["Cancelled", "Denied"].includes(appointmentData.status);
 
     await client.query(
-      `UPDATE Appointments SET status = 'Cancel' WHERE id = $1`,
+      `UPDATE Appointments SET status = 'Cancelled' WHERE id = $1`,
       [appointmentId]
     );
 
@@ -300,9 +300,9 @@ export async function updateAppointment(
         ]
       );
 
-      // If status changed to Cancel or Declined, restore availability
-      const wasActive = !["Cancel", "Declined"].includes(oldStatus);
-      const isBecomingInactive = ["Cancel", "Declined"].includes(status ?? "");
+      // If status changed to Cancelled or Denied, restore availability
+      const wasActive = !["Cancelled", "Denied"].includes(oldStatus);
+      const isBecomingInactive = ["Cancelled", "Denied"].includes(status ?? "");
 
       if (wasActive && isBecomingInactive) {
         await addDoctorAvailability({
