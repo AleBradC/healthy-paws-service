@@ -48,7 +48,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
-    "@apollo/server": "^5.5.0",
+    "@apollo/server": "^5.5.1",
     "@as-integrations/express5": "^1.1.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
