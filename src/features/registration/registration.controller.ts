@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ROLES } from "../../constants";
-import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
+import { RegisterDoctorPayload, RegisterOwnerPayload, ApiResponse } from "../../types";
 import { RegistrationService } from "./registration.service";
 import { ClientErrorMessages, SuccessMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
@@ -31,10 +31,14 @@ export class RegistrationController {
         const payload: RegisterOwnerPayload = { owner, pet };
         const newOwner = await this.registrationService.registerOwner(payload);
 
-        res.status(201).json({
+        const response: ApiResponse<{ user: any }> = {
+          status: "success",
           message: SuccessMessages.OWNER_REGISTERED,
-          user: newOwner,
-        });
+          data: {
+            user: newOwner,
+          }
+        };
+        res.status(201).json(response);
         return;
       }
 
@@ -50,10 +54,14 @@ export class RegistrationController {
           doctor,
         } as RegisterDoctorPayload);
 
-        res.status(201).json({
+        const response: ApiResponse<{ user: any }> = {
+          status: "success",
           message: SuccessMessages.DOCTOR_REGISTERED,
-          user: newDoctor,
-        });
+          data: {
+            user: newDoctor,
+          }
+        };
+        res.status(201).json(response);
         return;
       }
 

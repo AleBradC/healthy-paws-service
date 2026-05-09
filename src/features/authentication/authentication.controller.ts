@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
-import { UserResponse } from "../../types";
+import { UserResponse, ApiResponse } from "../../types";
 import { ClientErrorMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import { ROLES, SuccessMessages } from "../../constants";
@@ -69,12 +69,16 @@ export class AuthenticationController {
           };
           const token = this.authenticationService.generateAccessToken(payload);
 
-          return res.json({
+          const response: ApiResponse<{ accessToken: string; role: string; id: string }> = {
+            status: "success",
             message: SuccessMessages.LOGIN_SUCCESS,
-            accessToken: token,
-            role: user.role,
-            id: ownerOrDoctorId,
-          });
+            data: {
+              accessToken: token,
+              role: user.role,
+              id: ownerOrDoctorId,
+            }
+          };
+          return res.json(response);
         } catch (error) {
           return next(error);
         }
@@ -94,7 +98,8 @@ export class AuthenticationController {
       }
 
       await this.authenticationService.startPasswordReset(email);
-      res.json({ message: SuccessMessages.RESET_CODE_SENT });
+      const response: ApiResponse = { status: "success", message: SuccessMessages.RESET_CODE_SENT };
+      res.json(response);
     } catch (error) {
       next(error);
     }
@@ -116,7 +121,8 @@ export class AuthenticationController {
         throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
       }
 
-      res.json({ message: SuccessMessages.RESET_CODE_VERIFIED });
+      const response: ApiResponse = { status: "success", message: SuccessMessages.RESET_CODE_VERIFIED };
+      res.json(response);
     } catch (error) {
       next(error);
     }
@@ -135,7 +141,8 @@ export class AuthenticationController {
       }
 
       await this.authenticationService.resetPassword(email, code, newPassword);
-      res.json({ message: SuccessMessages.PASSWORD_RESET_SUCCESS });
+      const response: ApiResponse = { status: "success", message: SuccessMessages.PASSWORD_RESET_SUCCESS };
+      res.json(response);
     } catch (error) {
       next(error);
     }
