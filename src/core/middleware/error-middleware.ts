@@ -6,9 +6,9 @@ import { ApiResponse } from "../../types";
 
 export const globalErrorHandler = (
   err: Error,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   if (err instanceof ClientError) {
     const response: ApiResponse = {
