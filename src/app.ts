@@ -75,21 +75,19 @@ const startServer = async () => {
     // GraphQL Route
     app.use(
       "/graphql",
+      (req, res, next) => {
+        passport.authenticate("jwt", { session: false }, (err: any, user: any) => {
+          if (user) {
+            req.user = user;
+          }
+          next();
+        })(req, res, next);
+      },
       expressMiddleware(server, {
         context: async ({ req }) => {
-          let user = null;
-          const authHeader = req.headers.authorization;
-          if (authHeader && authHeader.startsWith("Bearer ")) {
-            const token = authHeader.substring(7);
-            try {
-              user = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-            } catch (err) {
-              // invalid token
-            }
-          }
           return {
             db: pool,
-            user,
+            user: req.user || null,
             doctorLoaders: createDoctorLoaders(),
             petLoaders: createPetLoaders(),
             ownerLoaders: createOwnerLoaders(),

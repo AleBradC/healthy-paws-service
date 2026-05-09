@@ -270,3 +270,10 @@ export interface ActiveTreatment {
   start_date: string;
   end_date?: string;
 }
+
+// --- STANDARDIZED API RESPONSE ---
+export interface ApiResponse<T = any> {
+  status: "success" | "error";
+  message?: string;
+  data?: T;
+}

@@ -1,12 +1,7 @@
-import {
-  getAllOwners,
-  getOwnerEmail,
-  getPetsByOwner,
-  updateOwnerProfile,
-} from "./owners.repository";
+import { ownersService } from "./owners.service";
+import { getOwnerEmail, getPetsByOwner } from "./owners.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Owner } from "../../types";
-import { verifyOwnerOwnership } from "../../core/utils/authorization.utils";
 import {
   GetByIdArgs,
   UpdateOwnerProfileArgs,
@@ -14,17 +9,16 @@ import {
 
 export const ownersResolvers = {
   Query: {
-    owners: () => getAllOwners(),
+    owners: () => ownersService.getAllOwners(),
     owner: async (_: any, { id }: GetByIdArgs, context: GraphQLContext) => {
-      await verifyOwnerOwnership(context.user!.id, id);
-      return context.ownerLoaders.ownerById.load(id);
+      const ownerId = await ownersService.getOwner(id, context.user!.id);
+      return context.ownerLoaders.ownerById.load(ownerId);
     },
   },
 
   Mutation: {
     updateOwnerProfile: async (_: any, { input }: UpdateOwnerProfileArgs, context: GraphQLContext) => {
-      await verifyOwnerOwnership(context.user!.id, input.ownerId);
-      return updateOwnerProfile(input);
+      return ownersService.updateOwnerProfile(input, context.user!.id);
     },
   },
 
