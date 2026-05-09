@@ -1,21 +1,12 @@
+import { doctorsService } from "./doctors.service";
 import {
-  getAllDoctors,
-  updateDoctorProfile,
-  addDoctorSpecialization,
-  removeDoctorSpecialization,
-  updateDoctorSpecialization,
-  addDoctorAvailability,
-  removeDoctorAvailability,
   getAppointmentsByDoctor,
   getAvailabilitiesByDoctor,
   getEmailDoctor,
   getPatientsByDoctor,
-  getDoctorsTotalCount,
-  getAllSpecializations,
 } from "./doctors.repository";
 import { GraphQLContext } from "../../schema/loaders";
 import { Doctor, Specialization } from "../../types";
-import { verifyDoctorOwnership } from "../../core/utils/authorization.utils";
 import {
   GetByIdArgs,
   UpdateDoctorProfileArgs,
@@ -30,51 +21,43 @@ import {
 export const doctorsResolvers = {
   Query: {
     doctors: async (_: any, { limit, skip, name, specializationId }: GetPaginationArgs) => {
-      const items = await getAllDoctors(limit, skip, name, specializationId);
-      const totalCount = await getDoctorsTotalCount(name, specializationId);
-      return { items, totalCount };
+      return doctorsService.getDoctors(limit, skip, name, specializationId);
     },
-    specializations: () => getAllSpecializations(),
+    specializations: () => doctorsService.getAllSpecializations(),
     doctor: (_: any, { id }: GetByIdArgs, context: GraphQLContext) =>
       context.doctorLoaders.doctorById.load(id),
   },
 
   Mutation: {
     updateDoctorProfile: async (_: any, { input }: UpdateDoctorProfileArgs, context: GraphQLContext) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return updateDoctorProfile(input);
+      return doctorsService.updateDoctorProfile(input, context.user!.id);
     },
     addDoctorSpecialization: async (_: any, { input }: AddDoctorSpecializationArgs, context: GraphQLContext) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return addDoctorSpecialization(input);
+      return doctorsService.addDoctorSpecialization(input, context.user!.id);
     },
     removeDoctorSpecialization: async (
       _: any,
       { input }: RemoveDoctorSpecializationArgs,
       context: GraphQLContext
     ) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return removeDoctorSpecialization(input);
+      return doctorsService.removeDoctorSpecialization(input, context.user!.id);
     },
     updateDoctorSpecialization: async (
       _: any,
       { input }: UpdateDoctorSpecializationArgs,
       context: GraphQLContext
     ) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return updateDoctorSpecialization(input);
+      return doctorsService.updateDoctorSpecialization(input, context.user!.id);
     },
     addDoctorAvailability: async (_: any, { input }: AddDoctorAvailabilityArgs, context: GraphQLContext) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return addDoctorAvailability(input);
+      return doctorsService.addDoctorAvailability(input, context.user!.id);
     },
     removeDoctorAvailability: async (
       _: any,
       { input }: RemoveDoctorAvailabilityArgs,
       context: GraphQLContext
     ) => {
-      await verifyDoctorOwnership(context.user!.id, input.doctorId);
-      return removeDoctorAvailability(input);
+      return doctorsService.removeDoctorAvailability(input, context.user!.id);
     },
   },
 
