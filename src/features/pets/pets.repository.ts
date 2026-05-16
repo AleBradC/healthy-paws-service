@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import pool from "../../core/config/db";
 import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
 import {
@@ -14,6 +15,25 @@ import {
   OwnerErrorMessages,
   SystemErrorMessages,
 } from "../../errors/constants";
+
+/**
+ * Verifies that a pet record belongs to the specified owner.
+ * The roleId from the token is the ownerId.
+ */
+export async function verifyPetOwnership(roleId: string, petId: string): Promise<void> {
+  const query = `
+    SELECT 1 
+    FROM Pets 
+    WHERE id = $1 AND owner_id = $2;
+  `;
+  const result = await pool.query(query, [petId, roleId]);
+
+  if (result.rowCount === 0) {
+    throw new GraphQLError("You do not have permission to modify this pet record.", {
+      extensions: { code: "FORBIDDEN" },
+    });
+  }
+}
 
 export async function getPetById(petId: string): Promise<Pet | null> {
   const query = `SELECT * FROM Pets WHERE id = $1;`;

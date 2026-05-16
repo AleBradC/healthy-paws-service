@@ -3,8 +3,9 @@ import {
   createAppointment,
   updateAppointment,
   removeAppointment,
+  verifyAppointmentOwnership,
 } from "./appointments.repository";
-import { verifyAppointmentOwnership, verifyPetOwnership } from "../../core/utils/authorization.utils";
+import { verifyPetOwnership } from "../pets/pets.repository";
 import { Appointment } from "../../types";
 import { CreateAppointmentInput, UpdateAppointmentInput, RemoveAppointmentInput } from "../../schema/resolvers.types";
 
