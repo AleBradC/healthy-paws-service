@@ -68,22 +68,6 @@ export class AuthenticationService {
     }
   }
 
-  public async findOwnerIdByUserId(userId: string): Promise<string | null> {
-    try {
-      return await this.authenticationRepository.findOwnerIdByUserId(userId);
-    } catch (err) {
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
-  public async findDoctorIdByUserId(userId: string): Promise<string | null> {
-    try {
-      return await this.authenticationRepository.findDoctorIdByUserId(userId);
-    } catch (err) {
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
   public async startPasswordReset(email: string): Promise<void> {
     try {
       const user = await this.authenticationRepository.findUserByEmail(email);

@@ -24,22 +24,6 @@ export class AuthenticationRepository {
     return result.rows[0] || null;
   }
 
-  public async findDoctorIdByUserId(userId: string): Promise<string | null> {
-    const result: QueryResult<{ id: string }> = await this.db.query(
-      "SELECT id FROM Doctors WHERE user_id = $1",
-      [userId]
-    );
-    return result.rows[0]?.id || null;
-  }
-
-  public async findOwnerIdByUserId(userId: string): Promise<string | null> {
-    const result: QueryResult<{ id: string }> = await this.db.query(
-      "SELECT id FROM Owners WHERE user_id = $1",
-      [userId]
-    );
-    return result.rows[0]?.id || null;
-  }
-
   public async createResetToken(
     userId: string,
     resetCode: string,

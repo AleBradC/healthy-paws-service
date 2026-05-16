@@ -6,7 +6,6 @@ import {
   type StrategyOptions,
   type VerifiedCallback,
 } from "passport-jwt";
-import { JwtPayload } from "jsonwebtoken";
 import pool from "../config/db";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
@@ -15,6 +14,7 @@ import {
   SystemErrorMessages,
 } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
+import { JwtPayload } from "../../types";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
@@ -56,12 +56,20 @@ passport.use(
     jwtOptions,
     async (jwt_payload: JwtPayload, done: VerifiedCallback) => {
       try {
-        const user = await authenticationService.findUserById(jwt_payload.id);
-        if (user) {
-          return done(null, user);
-        } else {
+        if (!jwt_payload?.id) {
           return done(null, false);
         }
+
+        const user = await authenticationService.findUserById(jwt_payload.id);
+        if (!user) {
+          return done(null, false);
+        }
+
+        return done(null, {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        });
       } catch (err) {
         return done(err, false);
       }

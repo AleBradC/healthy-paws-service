@@ -23,7 +23,7 @@ export const ownersResolvers = {
   },
 
   Owner: {
-    email: (owner: Owner) => getOwnerEmail(owner.user_id),
+    email: (owner: Owner) => getOwnerEmail(owner.id),
     pets: (owner: Owner) => getPetsByOwner(owner.id),
   },
 };

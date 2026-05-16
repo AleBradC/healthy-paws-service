@@ -23,7 +23,7 @@ async function batchOwnersByPetIds(
 
   const result = await pool.query(
     `
-    SELECT o.id, o.name, o.user_id, p.id AS pet_id
+    SELECT o.id, o.name, p.id AS pet_id
     FROM Owners o
     JOIN Pets p ON o.id = p.owner_id
     WHERE p.id = ANY($1);
@@ -37,7 +37,6 @@ async function batchOwnersByPetIds(
     petIdToOwner.set(row.pet_id, {
       id: row.id,
       name: row.name,
-      user_id: row.user_id,
     });
   }
 

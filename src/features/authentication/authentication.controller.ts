@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
-import { UserResponse, ApiResponse } from "../../types";
+import { JwtPayload, UserResponse, ApiResponse } from "../../types";
 import { ClientErrorMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
-import { ROLES, SuccessMessages } from "../../constants";
+import { SuccessMessages } from "../../constants";
 
 export class AuthenticationController {
   private authenticationService: AuthenticationService;
@@ -36,34 +36,8 @@ export class AuthenticationController {
         }
 
         try {
-          let ownerOrDoctorId: string = user.id;
-
-          if (user.role === ROLES.OWNER_ROLE) {
-            const ownerId =
-              await this.authenticationService.findOwnerIdByUserId(user.id);
-            if (ownerId) {
-              ownerOrDoctorId = ownerId;
-            } else {
-              throw new ClientError(
-                ClientErrorMessages.OWNER_PROFILE_NOT_FOUND,
-                404
-              );
-            }
-          } else if (user.role === ROLES.DOCTOR_ROLE) {
-            const doctorId =
-              await this.authenticationService.findDoctorIdByUserId(user.id);
-            if (doctorId) {
-              ownerOrDoctorId = doctorId;
-            } else {
-              throw new ClientError(
-                ClientErrorMessages.DOCTOR_PROFILE_NOT_FOUND,
-                404
-              );
-            }
-          }
-
-          const payload: UserResponse = {
-            id: ownerOrDoctorId,
+          const payload: JwtPayload = {
+            id: user.id,
             email: user.email,
             role: user.role,
           };
@@ -75,7 +49,7 @@ export class AuthenticationController {
             data: {
               accessToken: token,
               role: user.role,
-              id: ownerOrDoctorId,
+              id: user.id,
             }
           };
           return res.json(response);

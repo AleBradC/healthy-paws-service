@@ -60,7 +60,7 @@ export async function getPetById(petId: string): Promise<Pet | null> {
 
 export async function getOwnerByPet(petId: string): Promise<Owner | null> {
   const query = `
-    SELECT o.id, o.name, o.user_id 
+    SELECT o.id, o.name 
     FROM Owners o 
     JOIN Pets p ON o.id = p.owner_id 
     WHERE p.id = $1;

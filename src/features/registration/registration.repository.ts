@@ -39,16 +39,16 @@ export class RegistrationRepository {
       );
       const newUser = userResult.rows[0];
 
-      const ownerResult = await client.query(
-        "INSERT INTO Owners (user_id, name) VALUES ($1, $2) RETURNING id",
+      // Owners.id IS Users.id (shared primary key, see database.sql).
+      await client.query(
+        "INSERT INTO Owners (id, name) VALUES ($1, $2)",
         [newUser.id, ownerName]
       );
-      const newOwner = ownerResult.rows[0];
 
       await client.query(
         "INSERT INTO Pets (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
         [
-          newOwner.id,
+          newUser.id,
           petData.name,
           petData.type,
           petData.breed,
@@ -84,11 +84,12 @@ export class RegistrationRepository {
       );
       const newUser = userResult.rows[0];
 
-      const doctorResult = await client.query(
-        "INSERT INTO Doctors (user_id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4) RETURNING id",
+      // Doctors.id IS Users.id (shared primary key, see database.sql).
+      await client.query(
+        "INSERT INTO Doctors (id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4)",
         [newUser.id, name, clinicName, clinicAddress]
       );
-      const newDoctorId = doctorResult.rows[0].id;
+      const newDoctorId = newUser.id;
 
       for (const specPayload of specializations) {
         const specResult = await client.query(

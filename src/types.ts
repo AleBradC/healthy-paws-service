@@ -192,7 +192,6 @@ export interface User {
 
 export interface Owner {
   id: string;
-  user_id: string;
   name: string;
   email?: string;
   pets?: Pet[];
@@ -201,7 +200,6 @@ export interface Owner {
 
 export interface Doctor {
   id: string;
-  user_id: string;
   name: string;
   email?: string;
   clinic_name?: string;

@@ -114,10 +114,11 @@ export async function getDoctorById(doctorId: string): Promise<Doctor | null> {
   }
 }
 
-export async function getEmailDoctor(userId: string): Promise<string | null> {
+// doctorId IS users.id (shared primary key, see database.sql).
+export async function getEmailDoctor(doctorId: string): Promise<string | null> {
   const query = `SELECT email FROM Users WHERE id = $1;`;
   try {
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [doctorId]);
     return result.rows[0]?.email || null;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
