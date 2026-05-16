@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthenticationRepository } from "./authentication.repository";
-import { UserRecord, UserResponse, JwtPayload } from "../../types";
+import { SafeUserRecord, UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
 import {
   getResetEmailHtml,
@@ -60,7 +60,7 @@ export class AuthenticationService {
     }
   }
 
-  public async findUserById(id: string): Promise<UserRecord | null> {
+  public async findUserById(id: string): Promise<SafeUserRecord | null> {
     try {
       return await this.authenticationRepository.findUserById(id);
     } catch (err) {

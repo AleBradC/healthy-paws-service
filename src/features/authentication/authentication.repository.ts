@@ -1,5 +1,5 @@
 import { Pool, QueryResult } from "pg";
-import { UserRecord } from "../../types";
+import { SafeUserRecord, UserRecord } from "../../types";
 
 export class AuthenticationRepository {
   private db: Pool;
@@ -16,9 +16,9 @@ export class AuthenticationRepository {
     return result.rows[0] || null;
   }
 
-  public async findUserById(id: string): Promise<UserRecord | null> {
-    const result: QueryResult<UserRecord> = await this.db.query(
-      "SELECT * FROM Users WHERE id = $1",
+  public async findUserById(id: string): Promise<SafeUserRecord | null> {
+    const result: QueryResult<SafeUserRecord> = await this.db.query(
+      "SELECT id, email, role FROM Users WHERE id = $1",
       [id]
     );
     return result.rows[0] || null;

@@ -1,12 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import { ROLES } from "./constants";
 
-// Row from Users table (DB record, includes all fields)
+// Row from Users table (DB record, includes all fields).
+// Only use this where password_hash is explicitly required (e.g. validateUser).
 export interface UserRecord {
   id: string;
   email: string;
   password_hash: string;
   password_salt: string;
+  role: ROLES;
+}
+
+// Projection of Users row without credentials.
+// Use as the return type of any lookup that does NOT need the password hash.
+export interface SafeUserRecord {
+  id: string;
+  email: string;
   role: ROLES;
 }
 
