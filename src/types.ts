@@ -47,11 +47,13 @@ export interface UserResponse {
 }
 
 export interface JwtPayload {
-  id: string;
+  id:   string;
   email: string;
-  role: ROLES;
-  iat?: number;
-  exp?: number;
+  role:  ROLES;
+  iss?:  string;
+  aud?:  string | string[];
+  iat?:  number;
+  exp?:  number;
 }
 
 // Registration owner payload (request DTO)

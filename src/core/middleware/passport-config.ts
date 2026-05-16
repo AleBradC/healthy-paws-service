@@ -53,7 +53,9 @@ const cookieExtractor = (req: Request): string | null =>
 
 const jwtOptions: StrategyOptions = {
   jwtFromRequest: cookieExtractor,
-  secretOrKey: JWT_SECRET,
+  secretOrKey:    JWT_SECRET,
+  issuer:         process.env.JWT_ISSUER   ?? "healthy-paws",
+  audience:       process.env.JWT_AUDIENCE ?? "healthy-paws-client",
 };
 
 passport.use(

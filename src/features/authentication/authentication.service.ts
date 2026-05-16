@@ -40,7 +40,11 @@ export class AuthenticationService {
       throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
     }
 
-    return jwt.sign(payload, secret, { expiresIn: "1h" });
+    return jwt.sign(payload, secret, {
+      expiresIn: (process.env.JWT_EXPIRES_IN ?? "1h") as jwt.SignOptions["expiresIn"],
+      issuer:    process.env.JWT_ISSUER   ?? "healthy-paws",
+      audience:  process.env.JWT_AUDIENCE ?? "healthy-paws-client",
+    });
   }
 
   public async validateUser(
