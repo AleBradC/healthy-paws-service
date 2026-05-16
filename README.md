@@ -10,7 +10,11 @@ The backend API service for the Healthy Paws platform, providing a GraphQL API f
 - **Authentication:** Passport.js (JWT & Local Strategy)
 - **Mailing:** Nodemailer
 
+---
+
 ## 🛠️ Getting Started
+
+This service can be run standalone for development or as part of the [Healthy Paws Wrapper](https://github.com/AleBradC/healthy-paws-wrapper) which includes the frontend and Nginx gateway.
 
 ### Prerequisites
 
@@ -18,14 +22,21 @@ The backend API service for the Healthy Paws platform, providing a GraphQL API f
 - **PostgreSQL:** Running locally or remotely
 - **npm:** v10 or later
 
-### Installation
+### Setup Options
 
-1. Clone the repository
-2. Navigate to the service directory:
+#### Option A: Running with Docker (Recommended)
+If you want to run the full stack (Frontend + Backend + DB), use the [Wrapper Repository](https://github.com/AleBradC/healthy-paws-wrapper):
+```bash
+docker-compose up --build
+```
+
+#### Option B: Standalone Development
+
+1. Navigate to the service directory:
    ```bash
    cd healthy-paws-service
    ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
@@ -40,7 +51,7 @@ The backend API service for the Healthy Paws platform, providing a GraphQL API f
 
 ### Configuration
 
-Create a `.env` file in the root directory and configure the following variables (see `.env.example` if available):
+Create a `.env` file in the root directory and configure the following variables:
 
 ```env
 PORT=8080
@@ -71,6 +82,8 @@ MAIL_FROM=no-reply@healthypaws.com
   ```bash
   npm start
   ```
+
+---
 
 ## ⚙️ CI/CD
 
