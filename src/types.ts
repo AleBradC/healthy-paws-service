@@ -191,14 +191,6 @@ export type PasswordResetTokens = {
 
 // --- GRAPHQL ENTITY TYPES ---
 
-export interface User {
-  id: string;
-  email: string;
-  hash?: string;
-  salt?: string;
-  role: "owner" | "doctor";
-}
-
 export interface Owner {
   id: string;
   name: string;

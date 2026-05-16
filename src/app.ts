@@ -1,6 +1,7 @@
+import "dotenv/config";
+
 import express from "express";
 import http from "http";
-import * as dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -21,8 +22,6 @@ import { resolvers } from "./schema/resolvers";
 import { createDoctorLoaders } from "./features/doctors/doctors.loaders";
 import { createPetLoaders } from "./features/pets/pets.loaders";
 import { createOwnerLoaders } from "./features/owners/owners.loaders";
-
-dotenv.config();
 
 const app = express();
 const httpServer = http.createServer(app);

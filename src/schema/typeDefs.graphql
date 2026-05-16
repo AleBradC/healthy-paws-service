@@ -11,22 +11,9 @@ enum AppointmentStatus {
   Cancelled
 }
 
-enum UserRole {
-  owner
-  doctor
-}
-
 # ==================================================================
 # Core Object Types
 # ==================================================================
-type User {
-  id: ID!
-  email: String!
-  hash: String!
-  salt: String!
-  role: UserRole!
-}
-
 type Owner {
   id: ID!
   name: String!

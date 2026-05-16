@@ -1,7 +1,6 @@
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import * as dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthenticationRepository } from "./authentication.repository";
@@ -19,8 +18,6 @@ import {
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
 import { APP_NAME } from "../../core/config/email";
-
-dotenv.config();
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
