@@ -61,7 +61,6 @@ export interface OwnerPayload {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
 }
 export interface PetPayload {
   name: string;
@@ -84,7 +83,6 @@ export interface DoctorPayload {
   name: string;
   email: string;
   password?: string;
-  confirmPassword?: string;
   clinicName: string;
   clinicAddress: string;
   specializations: DoctorSpecializationPayload[];

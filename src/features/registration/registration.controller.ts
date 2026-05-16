@@ -37,7 +37,13 @@ export class RegistrationController {
         throw new ClientError(message, 400);
       }
 
-      const payload: RegisterOwnerPayload = { owner, pet };
+      // Strip confirmPassword at the controller boundary so it never reaches
+      // the service or repository.
+      const { confirmPassword: _oc, ...ownerData } = ownerResult.data;
+      const payload: RegisterOwnerPayload = {
+        owner: ownerData,
+        pet: petResult.data,
+      };
       const newOwner = await this.registrationService.registerOwner(payload);
 
       const response: ApiResponse<{ user: any }> = {
@@ -73,8 +79,11 @@ export class RegistrationController {
         throw new ClientError(message, 400);
       }
 
+      // Strip confirmPassword at the controller boundary so it never reaches
+      // the service or repository.
+      const { confirmPassword: _dc, ...doctorData } = doctorResult.data;
       const newDoctor = await this.registrationService.registerDoctor({
-        doctor,
+        doctor: doctorData,
       } as RegisterDoctorPayload);
 
       const response: ApiResponse<{ user: any }> = {
