@@ -72,7 +72,8 @@ export class AuthenticationService {
     try {
       const user = await this.authenticationRepository.findUserByEmail(email);
       if (!user) {
-        throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
+        // Silently succeed — never reveal whether an email is registered.
+        return;
       }
 
       const resetCode = crypto.randomInt(100000, 999999).toString();
@@ -145,16 +146,14 @@ export class AuthenticationService {
     newPassword: string
   ): Promise<void> {
     const user = await this.authenticationRepository.findUserByEmail(email);
-    if (!user) {
-      throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
-    }
 
-    const token = await this.authenticationRepository.findValidResetToken(
-      user.id,
-      code
-    );
+    // If the email is unknown there can be no valid token — fall through to the
+    // same "invalid code" error as a wrong code, so email existence is not revealed.
+    const token = user
+      ? await this.authenticationRepository.findValidResetToken(user.id, code)
+      : null;
 
-    if (!token) {
+    if (!token || !user) {
       throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
     }
 
