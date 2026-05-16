@@ -4,6 +4,13 @@ import { ClientErrorMessages } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
 import { ApiResponse } from "../../types";
 
+// body-parser tags its PayloadTooLargeError with `type: "entity.too.large"`,
+// which is more specific than just checking `statusCode === 413`.
+const isPayloadTooLargeError = (err: unknown): boolean =>
+  !!err &&
+  typeof err === "object" &&
+  (err as { type?: string }).type === "entity.too.large";
+
 export const globalErrorHandler = (
   err: Error,
   _req: Request,
@@ -16,6 +23,14 @@ export const globalErrorHandler = (
       message: err.message,
     };
     return res.status(err.statusCode).json(response);
+  }
+
+  if (isPayloadTooLargeError(err)) {
+    const response: ApiResponse = {
+      status: "error",
+      message: ClientErrorMessages.PAYLOAD_TOO_LARGE,
+    };
+    return res.status(413).json(response);
   }
 
   if (err instanceof SystemError) {

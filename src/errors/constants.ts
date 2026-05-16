@@ -9,6 +9,7 @@ export enum ClientErrorMessages {
   EMAIL_REQUIRED = "Email is required.",
   NEW_PASSWORD_REQUIRED = "New password is required.",
   REGISTRATION_FAILED = "Registration failed. Please try again later.",
+  PAYLOAD_TOO_LARGE = "Request payload is too large.",
   INTERNAL_SERVER_ERROR = "An internal server error occurred. Please try again later.",
 }
 

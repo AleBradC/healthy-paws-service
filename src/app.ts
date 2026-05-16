@@ -13,6 +13,10 @@ import { readFileSync } from "fs";
 import path from "path";
 
 import pool from "./core/config/db";
+import {
+  BODY_PARSER_JSON_OPTIONS,
+  BODY_PARSER_URLENCODED_OPTIONS,
+} from "./core/config/body-parser";
 import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
@@ -50,8 +54,8 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json(BODY_PARSER_JSON_OPTIONS));
+app.use(bodyParser.urlencoded(BODY_PARSER_URLENCODED_OPTIONS));
 app.use(passport.initialize());
 
 // REST Routes
