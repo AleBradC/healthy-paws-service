@@ -123,12 +123,6 @@ export interface FindUserByIdParams {
 export interface FindUserByEmailParams {
   email: string;
 }
-export interface FindOwnerIdByUserIdParams {
-  userId: string;
-}
-export interface FindDoctorIdByUserIdParams {
-  userId: string;
-}
 export interface UpdateUserPasswordParams {
   userId: string;
   hash: string;

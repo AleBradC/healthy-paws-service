@@ -7,13 +7,10 @@ import {
   type VerifiedCallback,
 } from "passport-jwt";
 import pool from "../config/db";
+import { JWT_CONFIG } from "../config/jwt";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
-import {
-  ClientErrorMessages,
-  SystemErrorMessages,
-} from "../../errors/constants";
-import { SystemError } from "../../errors/SystemError";
+import { ClientErrorMessages } from "../../errors/constants";
 import { JwtPayload } from "../../types";
 
 const authenticationRepository = new AuthenticationRepository(pool);
@@ -41,11 +38,6 @@ passport.use(
   )
 );
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
-}
-
 // Extract the JWT from the httpOnly cookie instead of the Authorization header.
 // The cookie is inaccessible to JavaScript, preventing XSS token theft.
 const cookieExtractor = (req: Request): string | null =>
@@ -53,9 +45,9 @@ const cookieExtractor = (req: Request): string | null =>
 
 const jwtOptions: StrategyOptions = {
   jwtFromRequest: cookieExtractor,
-  secretOrKey:    JWT_SECRET,
-  issuer:         process.env.JWT_ISSUER   ?? "healthy-paws",
-  audience:       process.env.JWT_AUDIENCE ?? "healthy-paws-client",
+  secretOrKey: JWT_CONFIG.secret,
+  issuer: JWT_CONFIG.issuer,
+  audience: JWT_CONFIG.audience,
 };
 
 passport.use(

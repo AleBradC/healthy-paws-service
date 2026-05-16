@@ -18,6 +18,7 @@ import {
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
 import { APP_NAME } from "../../core/config/email";
+import { JWT_CONFIG } from "../../core/config/jwt";
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
@@ -31,16 +32,10 @@ export class AuthenticationService {
   }
 
   public generateAccessToken(payload: JwtPayload): string {
-    const secret = process.env.JWT_SECRET;
-
-    if (!secret) {
-      throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
-    }
-
-    return jwt.sign(payload, secret, {
-      expiresIn: (process.env.JWT_EXPIRES_IN ?? "1h") as jwt.SignOptions["expiresIn"],
-      issuer:    process.env.JWT_ISSUER   ?? "healthy-paws",
-      audience:  process.env.JWT_AUDIENCE ?? "healthy-paws-client",
+    return jwt.sign(payload, JWT_CONFIG.secret, {
+      expiresIn: JWT_CONFIG.expiresIn,
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
     });
   }
 
