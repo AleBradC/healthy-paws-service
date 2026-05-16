@@ -5,7 +5,6 @@ CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    password_salt TEXT NOT NULL,
     role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor')),
     image_url TEXT
 );

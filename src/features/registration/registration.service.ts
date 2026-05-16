@@ -34,7 +34,6 @@ export class RegistrationService {
       return await this.registrationRepository.createOwnerAndPet({
         email: normalizedEmail,
         hash,
-        salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.OWNER_ROLE,
         ownerName: payload.owner.name,
         petData: payload.pet,
@@ -65,7 +64,6 @@ export class RegistrationService {
       return await this.registrationRepository.createDoctorWithDetails({
         email: normalizedEmail,
         hash,
-        salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.DOCTOR_ROLE,
         doctorData: payload.doctor,
       });

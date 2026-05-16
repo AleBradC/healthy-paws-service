@@ -65,12 +65,11 @@ export class AuthenticationRepository {
 
   public async updateUserPassword(
     userId: string,
-    newHash: string,
-    newSalt: string
+    newHash: string
   ): Promise<void> {
     await this.db.query(
-      `UPDATE Users SET password_hash = $1, password_salt = $2 WHERE id = $3`,
-      [newHash, newSalt, userId]
+      `UPDATE Users SET password_hash = $1 WHERE id = $2`,
+      [newHash, userId]
     );
   }
 }

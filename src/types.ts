@@ -7,7 +7,6 @@ export interface UserRecord {
   id: string;
   email: string;
   password_hash: string;
-  password_salt: string;
   role: ROLES;
 }
 
@@ -23,7 +22,6 @@ export interface SafeUserRecord {
 export interface CreateOwnerArgs {
   email: string;
   hash: string;
-  salt: string;
   role: ROLES.OWNER_ROLE;
   ownerName: string;
   petData: PetPayload;
@@ -31,7 +29,6 @@ export interface CreateOwnerArgs {
 export interface CreateDoctorArgs {
   email: string;
   hash: string;
-  salt: string;
   role: ROLES.DOCTOR_ROLE;
   doctorData: DoctorPayload;
 }
@@ -135,7 +132,6 @@ export interface FindDoctorIdByUserIdParams {
 export interface UpdateUserPasswordParams {
   userId: string;
   hash: string;
-  salt: string;
 }
 
 /* ----------------------------------------------------------

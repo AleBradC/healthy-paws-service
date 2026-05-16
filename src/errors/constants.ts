@@ -6,8 +6,6 @@ export enum ClientErrorMessages {
   DOCTOR_DETAILS_REQUIRED = "Doctor details are required.",
   INVALID_ROLE = "A valid role ('owner' or 'doctor') must be specified.",
   INVALID_RESET_CODE = "Invalid or expired reset code.",
-  OWNER_PROFILE_NOT_FOUND = "Owner profile not found.",
-  DOCTOR_PROFILE_NOT_FOUND = "Doctor profile not found.",
   EMAIL_REQUIRED = "Email is required.",
   NEW_PASSWORD_REQUIRED = "New password is required.",
   REGISTRATION_FAILED = "Registration failed. Please try again later.",
@@ -60,8 +58,4 @@ export enum DoctorErrorMessages {
   DOCTOR_PROFILE_NOT_FOUND = "Doctor profile not found.",
   DOCTOR_SPECIALIZATION_DELETE_FAIL = "Failed to delete: Doctor is not associated with this specialization.",
   DOCTOR_AVAILABILITY_DELETE_FAIL = "Failed to delete: Doctor is not associated with this availability.",
-}
-
-export enum GenericErrorMessages {
-  INTERNAL_SERVER_ERROR = "An internal server error occurred. Please try again later.",
 }

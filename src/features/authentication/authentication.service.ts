@@ -176,8 +176,7 @@ export class AuthenticationService {
     try {
       await this.authenticationRepository.updateUserPassword(
         user.id,
-        hashedPassword,
-        "" // bcrypt salt is embedded in the hash
+        hashedPassword
       );
       await this.authenticationRepository.markResetTokenUsed(token.id);
     } catch (err) {

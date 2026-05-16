@@ -27,15 +27,15 @@ export class RegistrationRepository {
   public async createOwnerAndPet(
     args: CreateOwnerArgs
   ): Promise<{ id: string; email: string }> {
-    const { email, hash, salt, role, ownerName, petData } = args;
+    const { email, hash, role, ownerName, petData } = args;
     const client = await this.db.connect();
 
     try {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
-        [email, hash, salt, role]
+        "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
+        [email, hash, role]
       );
       const newUser = userResult.rows[0];
 
@@ -71,7 +71,7 @@ export class RegistrationRepository {
   public async createDoctorWithDetails(
     args: CreateDoctorArgs
   ): Promise<{ id: string; email: string }> {
-    const { email, hash, salt, role, doctorData } = args;
+    const { email, hash, role, doctorData } = args;
     const { name, clinicName, clinicAddress, specializations } = doctorData;
     const client = await this.db.connect();
 
@@ -79,8 +79,8 @@ export class RegistrationRepository {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
-        [email, hash, salt, role]
+        "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
+        [email, hash, role]
       );
       const newUser = userResult.rows[0];
 
