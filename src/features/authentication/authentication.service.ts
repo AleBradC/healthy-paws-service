@@ -22,6 +22,10 @@ import { APP_NAME } from "../../core/config/email";
 
 dotenv.config();
 
+// Computed once at module load. Used in validateUser to ensure the "unknown email"
+// path always runs a full bcrypt comparison, preventing timing-based enumeration.
+const DUMMY_HASH = bcrypt.hashSync("__dummy__", 10);
+
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
 
@@ -45,12 +49,13 @@ export class AuthenticationService {
   ): Promise<UserResponse | null> {
     try {
       const user = await this.authenticationRepository.findUserByEmail(email);
-      if (!user) {
-        return null;
-      }
 
-      const isMatch = await bcrypt.compare(password, user.password_hash);
-      if (isMatch) {
+      // Always run bcrypt.compare so unknown-email and wrong-password paths
+      // take the same wall-clock time, preventing timing-based enumeration.
+      const hashToCompare = user ? user.password_hash : DUMMY_HASH;
+      const isMatch = await bcrypt.compare(password, hashToCompare);
+
+      if (user && isMatch) {
         return { id: user.id, email: user.email, role: user.role };
       }
 
