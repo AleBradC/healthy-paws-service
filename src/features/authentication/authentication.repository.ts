@@ -24,6 +24,13 @@ export class AuthenticationRepository {
     return result.rows[0] || null;
   }
 
+  public async invalidatePreviousTokens(userId: string): Promise<void> {
+    await this.db.query(
+      "DELETE FROM PasswordResetTokens WHERE user_id = $1 AND used = false",
+      [userId]
+    );
+  }
+
   public async createResetToken(
     userId: string,
     resetCode: string,

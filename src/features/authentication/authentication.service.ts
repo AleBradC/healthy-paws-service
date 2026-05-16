@@ -48,7 +48,8 @@ export class AuthenticationService {
     password: string
   ): Promise<UserResponse | null> {
     try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
 
       // Always run bcrypt.compare so unknown-email and wrong-password paths
       // take the same wall-clock time, preventing timing-based enumeration.
@@ -75,21 +76,24 @@ export class AuthenticationService {
 
   public async startPasswordReset(email: string): Promise<void> {
     try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
       if (!user) {
         // Silently succeed — never reveal whether an email is registered.
         return;
       }
 
       const resetCode = crypto.randomInt(100000, 999999).toString();
+      const codeHash = crypto.createHash("sha256").update(resetCode).digest("hex");
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
+      await this.authenticationRepository.invalidatePreviousTokens(user.id);
       await this.authenticationRepository.createResetToken(
         user.id,
-        resetCode,
+        codeHash,
         expiresAt
       );
-      await this.sendResetCodeEmail(email, resetCode);
+      await this.sendResetCodeEmail(normalizedEmail, resetCode); // raw code goes only to email
     } catch (err) {
       if (err instanceof ClientError || err instanceof SystemError) {
         throw err;
@@ -129,14 +133,16 @@ export class AuthenticationService {
 
   public async verifyResetCode(email: string, code: string): Promise<boolean> {
     try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
       if (!user) {
         return false;
       }
 
+      const codeHash = crypto.createHash("sha256").update(code).digest("hex");
       const token = await this.authenticationRepository.findValidResetToken(
         user.id,
-        code
+        codeHash
       );
       return !!token;
     } catch (err) {
@@ -150,12 +156,14 @@ export class AuthenticationService {
     code: string,
     newPassword: string
   ): Promise<void> {
-    const user = await this.authenticationRepository.findUserByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
 
     // If the email is unknown there can be no valid token — fall through to the
     // same "invalid code" error as a wrong code, so email existence is not revealed.
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
     const token = user
-      ? await this.authenticationRepository.findValidResetToken(user.id, code)
+      ? await this.authenticationRepository.findValidResetToken(user.id, codeHash)
       : null;
 
     if (!token || !user) {

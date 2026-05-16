@@ -20,8 +20,9 @@ export class RegistrationService {
     payload: RegisterOwnerPayload
   ): Promise<{ id: string; email: string }> {
     try {
+      const normalizedEmail = payload.owner.email.trim().toLowerCase();
       const existingUser = await this.registrationRepository.findUserByEmail(
-        payload.owner.email
+        normalizedEmail
       );
 
       if (existingUser) {
@@ -31,7 +32,7 @@ export class RegistrationService {
       const hash = await hashPassword(payload.owner.password!);
 
       return await this.registrationRepository.createOwnerAndPet({
-        email: payload.owner.email,
+        email: normalizedEmail,
         hash,
         salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.OWNER_ROLE,
@@ -50,8 +51,9 @@ export class RegistrationService {
     payload: RegisterDoctorPayload
   ): Promise<{ id: string; email: string }> {
     try {
+      const normalizedEmail = payload.doctor.email.trim().toLowerCase();
       const existingUser = await this.registrationRepository.findUserByEmail(
-        payload.doctor.email
+        normalizedEmail
       );
 
       if (existingUser) {
@@ -61,7 +63,7 @@ export class RegistrationService {
       const hash = await hashPassword(payload.doctor.password!);
 
       return await this.registrationRepository.createDoctorWithDetails({
-        email: payload.doctor.email,
+        email: normalizedEmail,
         hash,
         salt: "", // bcrypt salt is embedded in the hash
         role: ROLES.DOCTOR_ROLE,

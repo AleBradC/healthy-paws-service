@@ -4,6 +4,7 @@ import { RegisterDoctorPayload, RegisterOwnerPayload, ApiResponse } from "../../
 import { RegistrationService } from "./registration.service";
 import { ClientErrorMessages, SuccessMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
+import { ownerSchema, petSchema, doctorSchema } from "./registration.validation";
 
 export class RegistrationController {
   private registrationService: RegistrationService;
@@ -28,6 +29,16 @@ export class RegistrationController {
           );
         }
 
+        const ownerResult = ownerSchema.safeParse(owner);
+        const petResult = petSchema.safeParse(pet);
+        if (!ownerResult.success || !petResult.success) {
+          const message =
+            ownerResult.error?.issues[0]?.message ??
+            petResult.error?.issues[0]?.message ??
+            "Invalid input";
+          throw new ClientError(message, 400);
+        }
+
         const payload: RegisterOwnerPayload = { owner, pet };
         const newOwner = await this.registrationService.registerOwner(payload);
 
@@ -48,6 +59,13 @@ export class RegistrationController {
             ClientErrorMessages.DOCTOR_DETAILS_REQUIRED,
             400
           );
+        }
+
+        const doctorResult = doctorSchema.safeParse(doctor);
+        if (!doctorResult.success) {
+          const message =
+            doctorResult.error.issues[0]?.message ?? "Invalid input";
+          throw new ClientError(message, 400);
         }
 
         const newDoctor = await this.registrationService.registerDoctor({

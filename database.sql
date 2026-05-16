@@ -126,7 +126,7 @@ CREATE TABLE Doctor_Service_Pricing (
 CREATE TABLE PasswordResetTokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
-  reset_code VARCHAR(6) NOT NULL,
+  reset_code VARCHAR(64) NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   used BOOLEAN NOT NULL DEFAULT FALSE
 );
