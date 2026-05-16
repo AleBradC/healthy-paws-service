@@ -1,5 +1,5 @@
-import { createPet, updatePet } from "./pets.repository";
-import { verifyPetOwnership, verifyOwnerOwnership } from "../../core/utils/authorization.utils";
+import { createPet, updatePet, verifyPetOwnership } from "./pets.repository";
+import { verifyOwnerOwnership } from "../../core/utils/authorization.utils";
 import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
 
 export const petsService = {

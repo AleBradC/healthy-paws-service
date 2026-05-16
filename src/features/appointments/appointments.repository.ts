@@ -1,4 +1,5 @@
 import { PoolClient } from "pg";
+import { GraphQLError } from "graphql";
 import pool from "../../core/config/db";
 import {
   ActiveTreatmentInput,
@@ -18,6 +19,39 @@ import {
   AppointmentErrorMessages,
   PetErrorMessages,
 } from "../../errors/constants";
+
+/**
+ * Verifies that an appointment belongs to the user (either the doctor or the owner of the pet).
+ */
+export async function verifyAppointmentOwnership(
+  roleId: string,
+  role: string,
+  appointmentId: string
+): Promise<void> {
+  let query: string;
+  if (role === "doctor") {
+    query = `
+      SELECT 1 
+      FROM Appointments 
+      WHERE id = $1 AND doctor_id = $2;
+    `;
+  } else {
+    query = `
+      SELECT 1 
+      FROM Appointments a 
+      JOIN Pets p ON a.pet_id = p.id 
+      WHERE a.id = $1 AND p.owner_id = $2;
+    `;
+  }
+
+  const result = await pool.query(query, [appointmentId, roleId]);
+
+  if (result.rowCount === 0) {
+    throw new GraphQLError("You do not have permission to access or modify this appointment.", {
+      extensions: { code: "FORBIDDEN" },
+    });
+  }
+}
 
 export async function getAppointmentById(
   id: string
