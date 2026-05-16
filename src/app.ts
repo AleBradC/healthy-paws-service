@@ -19,6 +19,7 @@ import registrationRoutes from "./features/registration/registration.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
 
 import { resolvers } from "./schema/resolvers";
+import { requireAuthMutations } from "./schema/plugins/requireAuthMutations";
 import { createDoctorLoaders } from "./features/doctors/doctors.loaders";
 import { createPetLoaders } from "./features/pets/pets.loaders";
 import { createOwnerLoaders } from "./features/owners/owners.loaders";
@@ -66,7 +67,10 @@ const startServer = async () => {
   const server = new ApolloServer({
     typeDefs,
     resolvers,
-    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    plugins: [
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      requireAuthMutations,
+    ],
   });
 
   try {
