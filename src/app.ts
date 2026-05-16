@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import * as dotenv from "dotenv";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
@@ -9,7 +10,6 @@ import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { readFileSync } from "fs";
 import path from "path";
-import * as jwt from "jsonwebtoken";
 
 import pool from "./core/config/db";
 import { passport } from "./core/middleware/passport-config";
@@ -28,9 +28,24 @@ const app = express();
 const httpServer = http.createServer(app);
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
+// Build the CORS origin list from env — no origins are hardcoded in source.
+// Set ALLOWED_ORIGINS=https://your-domain.com in production.
+// Dev fallback applies only when NODE_ENV is not "production".
+const getAllowedOrigins = (): string[] => {
+  if (process.env.ALLOWED_ORIGINS) {
+    return process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim());
+  }
+  if (process.env.NODE_ENV !== "production") {
+    return ["http://localhost:5173", "http://localhost:3000"];
+  }
+  return [];
+};
+
+// helmet must be first to ensure security headers are set on every response.
+app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"] : ["http://localhost:5173", "http://localhost:3000"],
+    origin: getAllowedOrigins(),
     credentials: true,
   })
 );
