@@ -43,14 +43,20 @@ export class AuthenticationController {
           };
           const token = this.authenticationService.generateAccessToken(payload);
 
-          const response: ApiResponse<{ accessToken: string; role: string; id: string }> = {
+          // Store the JWT in an httpOnly cookie — inaccessible to JavaScript,
+          // eliminating the XSS token-theft vector.
+          res.cookie("accessToken", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 60 * 60 * 1000, // 1 hour — matches JWT expiresIn
+            path: "/",
+          });
+
+          const response: ApiResponse<{ role: string; id: string }> = {
             status: "success",
             message: SuccessMessages.LOGIN_SUCCESS,
-            data: {
-              accessToken: token,
-              role: user.role,
-              id: user.id,
-            }
+            data: { role: user.role, id: user.id },
           };
           return res.json(response);
         } catch (error) {
@@ -120,5 +126,18 @@ export class AuthenticationController {
     } catch (error) {
       next(error);
     }
+  };
+
+  public logout = (_req: Request, res: Response): void => {
+    res.clearCookie("accessToken", { path: "/" });
+    res.json({ status: "success", message: "Logged out." });
+  };
+
+  public session = (req: Request, res: Response): void => {
+    if (!req.user) {
+      res.status(401).json({ status: "error", message: "Unauthorised." });
+      return;
+    }
+    res.json({ status: "success", data: req.user });
   };
 }

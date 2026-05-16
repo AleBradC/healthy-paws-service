@@ -1,8 +1,8 @@
 import passport from "passport";
+import { Request } from "express";
 import { Strategy as LocalStrategy } from "passport-local";
 import {
   Strategy as JwtStrategy,
-  ExtractJwt,
   type StrategyOptions,
   type VerifiedCallback,
 } from "passport-jwt";
@@ -46,8 +46,13 @@ if (!JWT_SECRET) {
   throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
 }
 
+// Extract the JWT from the httpOnly cookie instead of the Authorization header.
+// The cookie is inaccessible to JavaScript, preventing XSS token theft.
+const cookieExtractor = (req: Request): string | null =>
+  req?.cookies?.accessToken ?? null;
+
 const jwtOptions: StrategyOptions = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  jwtFromRequest: cookieExtractor,
   secretOrKey: JWT_SECRET,
 };
 

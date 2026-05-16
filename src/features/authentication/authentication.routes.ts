@@ -1,4 +1,5 @@
 import { Router } from "express";
+import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { AuthenticationRepository } from "./authentication.repository";
 import { AuthenticationController } from "./authentication.controller";
@@ -20,6 +21,12 @@ const authenticationController = new AuthenticationController(
 );
 
 router.post("/login", loginLimiter, authenticationController.login);
+router.post("/logout", authenticationController.logout);
+router.get(
+  "/session",
+  passport.authenticate("jwt", { session: false }),
+  authenticationController.session
+);
 router.post(
   "/reset-password/send-code",
   sendCodeLimiter,
