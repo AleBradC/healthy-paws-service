@@ -1,10 +1,18 @@
 import { z } from "zod";
 
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+[\]{};':"\\|,.<>/?]).{8,}$/,
+    "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+  );
+
 export const ownerSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("A valid email address is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -24,7 +32,7 @@ export const doctorSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("A valid email address is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: passwordSchema,
     confirmPassword: z.string(),
     clinicName: z.string().min(1, "Clinic name is required"),
     clinicAddress: z.string().min(1, "Clinic address is required"),

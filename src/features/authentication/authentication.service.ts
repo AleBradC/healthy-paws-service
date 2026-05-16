@@ -24,7 +24,7 @@ dotenv.config();
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
-const DUMMY_HASH = bcrypt.hashSync("__dummy__", 10);
+const DUMMY_HASH = bcrypt.hashSync("__dummy__", 12);
 
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
