@@ -27,7 +27,7 @@ const wrapResolvers = (resolversObj: any) => {
 export const resolvers = {
   Query: {
     ...wrapResolvers(appointmentsResolvers.Query),
-    ...doctorsResolvers.Query,
+    ...wrapResolvers(doctorsResolvers.Query),
     ...wrapResolvers(ownersResolvers.Query),
     ...wrapResolvers(petsResolvers.Query),
   },

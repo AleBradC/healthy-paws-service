@@ -35,3 +35,15 @@ export const resetLimiter = rateLimit({
     message: "Too many requests. Please try again later.",
   },
 });
+
+// 5 per hour per IP — registration is account creation, abuse-sensitive
+export const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: "error",
+    message: "Too many registration attempts. Please try again later.",
+  },
+});

@@ -9,6 +9,7 @@ import bodyParser from "body-parser";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
+import { ApolloArmor } from "@escape.tech/graphql-armor";
 import { readFileSync } from "fs";
 import path from "path";
 
@@ -21,6 +22,7 @@ import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
+import { buildOpenApiDocument } from "./openapi/registry";
 
 import { resolvers } from "./schema/resolvers";
 import { requireAuthMutations } from "./schema/plugins/requireAuthMutations";
@@ -62,19 +64,43 @@ app.use(passport.initialize());
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
 
+// OpenAPI spec for the REST surface. Served as static JSON so external
+// clients (mobile apps, integrations) can codegen against a typed contract.
+// The document is built once at startup from the same Zod schemas the
+// runtime validates against, so it can never drift from the implementation.
+app.get("/api/openapi.json", (_req, res) => {
+  res.json(buildOpenApiDocument());
+});
+
 const startServer = async () => {
   const typeDefs = readFileSync(
     path.join(__dirname, "schema/typeDefs.graphql"),
     { encoding: "utf-8" }
   );
 
+  // graphql-armor provides depth limit, cost limit, alias/directive/token limit
+  // and disables field suggestions. Introspection is disabled in production
+  // explicitly so error messages cannot leak the schema shape.
+  const armor = new ApolloArmor({
+    blockFieldSuggestion: { enabled: true },
+    maxDepth: { n: 8 },
+    costLimit: { maxCost: 5000 },
+    maxAliases: { n: 15 },
+    maxDirectives: { n: 50 },
+    maxTokens: { n: 1000 },
+  });
+  const armorProtection = armor.protect();
+
   const server = new ApolloServer({
     typeDefs,
     resolvers,
+    introspection: process.env.NODE_ENV !== "production",
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       requireAuthMutations,
+      ...armorProtection.plugins,
     ],
+    validationRules: [...armorProtection.validationRules],
   });
 
   try {
@@ -100,7 +126,15 @@ const startServer = async () => {
     app.use(
       "/graphql",
       (req, res, next) => {
+        // GraphQL accepts both authenticated and anonymous requests; the
+        // requireAuthMutations plugin and per-resolver requireAuth wrappers
+        // enforce gating. Only forward truly unexpected errors here — a
+        // missing or invalid token is normal and must fall through as
+        // anonymous so unauthenticated queries can still be evaluated.
         passport.authenticate("jwt", { session: false }, (err: any, user: any) => {
+          if (err) {
+            return next(err);
+          }
           if (user) {
             req.user = user;
           }

@@ -9,7 +9,6 @@ import {
 
 export const ownersResolvers = {
   Query: {
-    owners: () => ownersService.getAllOwners(),
     owner: async (_: any, { id }: GetByIdArgs, context: GraphQLContext) => {
       const ownerId = await ownersService.getOwner(id, context.user!.id);
       return context.ownerLoaders.ownerById.load(ownerId);

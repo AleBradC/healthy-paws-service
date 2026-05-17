@@ -15,6 +15,7 @@ export enum ClientErrorMessages {
 
 export enum SystemErrorMessages {
   JWT_SECRET_UNDEFINED = "CRITICAL: JWT_SECRET is not defined in environment variables.",
+  JWT_SIGN_FAILED = "Failed to sign JWT or compute expiry.",
   FRONTEND_URL_UNDEFINED = "CRITICAL: FRONTEND_URL is not defined in production environment.",
   DB_TRANSACTION_FAILED = "Database transaction failed and was rolled back.",
   DB_QUERY_FAILED = "Database query failed.",

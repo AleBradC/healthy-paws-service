@@ -21,11 +21,20 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+# Drop root: the node:20-alpine image ships a non-privileged `node` user/group
+# (uid 1000). Copy everything chowned to that user so the process can read
+# its own files but cannot modify the image filesystem as root.
+COPY --from=builder --chown=node:node /app/package*.json ./
+
+# Install only production deps so the runtime image doesn't carry the build
+# toolchain, vitest, codegen, etc. Smaller image, smaller attack surface.
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+
+COPY --from=builder --chown=node:node /app/dist ./dist
 # Include the GraphQL schema file as it's needed at runtime
-COPY --from=builder /app/src/schema/typeDefs.graphql ./dist/schema/
+COPY --from=builder --chown=node:node /app/src/schema/typeDefs.graphql ./dist/schema/
+
+USER node
 
 EXPOSE 8080
 
