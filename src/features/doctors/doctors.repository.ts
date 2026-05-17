@@ -223,7 +223,8 @@ export async function getPatientsByDoctor(doctorId: string): Promise<Pet[]> {
     SELECT DISTINCT p.id, p.name, p.type, p.breed, p.age, p.weight, p.owner_id
     FROM Appointments a 
     JOIN Pets p ON a.pet_id = p.id
-    WHERE a.doctor_id = $1;
+    WHERE a.doctor_id = $1
+      AND a.status = 'Completed';
   `;
   try {
     const result = await pool.query(query, [doctorId]);
