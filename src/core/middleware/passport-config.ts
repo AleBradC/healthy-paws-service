@@ -1,20 +1,16 @@
 import passport from "passport";
+import { Request } from "express";
 import { Strategy as LocalStrategy } from "passport-local";
 import {
   Strategy as JwtStrategy,
-  ExtractJwt,
   type StrategyOptions,
   type VerifiedCallback,
 } from "passport-jwt";
-import { JwtPayload } from "jsonwebtoken";
 import pool from "../config/db";
+import { JWT_CONFIG } from "../config/jwt";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
-import {
-  ClientErrorMessages,
-  SystemErrorMessages,
-} from "../../errors/constants";
-import { SystemError } from "../../errors/SystemError";
+import { JwtPayload } from "../../types";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
@@ -28,9 +24,9 @@ passport.use(
       try {
         const user = await authenticationService.validateUser(email, password);
         if (!user) {
-          return done(null, false, {
-            message: ClientErrorMessages.INVALID_CREDENTIALS,
-          });
+          // No message — the controller decides what the client sees so
+          // strategy-level strings can't leak through info.message.
+          return done(null, false);
         }
 
         return done(null, user);
@@ -41,14 +37,16 @@ passport.use(
   )
 );
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
-}
+// Extract the JWT from the httpOnly cookie instead of the Authorization header.
+// The cookie is inaccessible to JavaScript, preventing XSS token theft.
+const cookieExtractor = (req: Request): string | null =>
+  req?.cookies?.accessToken ?? null;
 
 const jwtOptions: StrategyOptions = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: JWT_SECRET,
+  jwtFromRequest: cookieExtractor,
+  secretOrKey: JWT_CONFIG.secret,
+  issuer: JWT_CONFIG.issuer,
+  audience: JWT_CONFIG.audience,
 };
 
 passport.use(
@@ -56,12 +54,20 @@ passport.use(
     jwtOptions,
     async (jwt_payload: JwtPayload, done: VerifiedCallback) => {
       try {
-        const user = await authenticationService.findUserById(jwt_payload.id);
-        if (user) {
-          return done(null, user);
-        } else {
+        if (!jwt_payload?.id) {
           return done(null, false);
         }
+
+        const user = await authenticationService.findUserById(jwt_payload.id);
+        if (!user) {
+          return done(null, false);
+        }
+
+        return done(null, {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        });
       } catch (err) {
         return done(err, false);
       }

@@ -1,5 +1,5 @@
 import { Pool, QueryResult } from "pg";
-import { UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
+import { SafeUserRecord, UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
 
 export class RegistrationRepository {
   private db: Pool;
@@ -16,9 +16,9 @@ export class RegistrationRepository {
     return result.rows[0] || null;
   }
 
-  public async findUserById(id: string): Promise<UserRecord | null> {
-    const result: QueryResult<UserRecord> = await this.db.query(
-      "SELECT * FROM Users WHERE id = $1",
+  public async findUserById(id: string): Promise<SafeUserRecord | null> {
+    const result: QueryResult<SafeUserRecord> = await this.db.query(
+      "SELECT id, email, role FROM Users WHERE id = $1",
       [id]
     );
     return result.rows[0] || null;
@@ -27,28 +27,28 @@ export class RegistrationRepository {
   public async createOwnerAndPet(
     args: CreateOwnerArgs
   ): Promise<{ id: string; email: string }> {
-    const { email, hash, salt, role, ownerName, petData } = args;
+    const { email, hash, role, ownerName, petData } = args;
     const client = await this.db.connect();
 
     try {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
-        [email, hash, salt, role]
+        "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
+        [email, hash, role]
       );
       const newUser = userResult.rows[0];
 
-      const ownerResult = await client.query(
-        "INSERT INTO Owners (user_id, name) VALUES ($1, $2) RETURNING id",
+      // Owners.id IS Users.id (shared primary key, see database.sql).
+      await client.query(
+        "INSERT INTO Owners (id, name) VALUES ($1, $2)",
         [newUser.id, ownerName]
       );
-      const newOwner = ownerResult.rows[0];
 
       await client.query(
         "INSERT INTO Pets (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
         [
-          newOwner.id,
+          newUser.id,
           petData.name,
           petData.type,
           petData.breed,
@@ -71,7 +71,7 @@ export class RegistrationRepository {
   public async createDoctorWithDetails(
     args: CreateDoctorArgs
   ): Promise<{ id: string; email: string }> {
-    const { email, hash, salt, role, doctorData } = args;
+    const { email, hash, role, doctorData } = args;
     const { name, clinicName, clinicAddress, specializations } = doctorData;
     const client = await this.db.connect();
 
@@ -79,16 +79,17 @@ export class RegistrationRepository {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        "INSERT INTO Users (email, password_hash, password_salt, role) VALUES ($1, $2, $3, $4) RETURNING id, email",
-        [email, hash, salt, role]
+        "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
+        [email, hash, role]
       );
       const newUser = userResult.rows[0];
 
-      const doctorResult = await client.query(
-        "INSERT INTO Doctors (user_id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4) RETURNING id",
+      // Doctors.id IS Users.id (shared primary key, see database.sql).
+      await client.query(
+        "INSERT INTO Doctors (id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4)",
         [newUser.id, name, clinicName, clinicAddress]
       );
-      const newDoctorId = doctorResult.rows[0].id;
+      const newDoctorId = newUser.id;
 
       for (const specPayload of specializations) {
         const specResult = await client.query(

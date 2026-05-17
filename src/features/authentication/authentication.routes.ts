@@ -1,8 +1,14 @@
 import { Router } from "express";
+import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { AuthenticationRepository } from "./authentication.repository";
 import { AuthenticationController } from "./authentication.controller";
 import pool from "../../core/config/db";
+import {
+  loginLimiter,
+  sendCodeLimiter,
+  resetLimiter,
+} from "../../core/middleware/rate-limit";
 
 const router = Router();
 
@@ -14,15 +20,22 @@ const authenticationController = new AuthenticationController(
   authenticationService
 );
 
-router.post("/login", authenticationController.login);
+router.post("/login", loginLimiter, authenticationController.login);
+router.post("/logout", authenticationController.logout);
+router.get(
+  "/session",
+  passport.authenticate("jwt", { session: false }),
+  authenticationController.session
+);
 router.post(
-  "/reset-password/send-code",
+  "/reset-password/request",
+  sendCodeLimiter,
   authenticationController.startPasswordReset
 );
 router.post(
-  "/reset-password/verify-code",
-  authenticationController.verifyResetCode
+  "/reset-password/reset",
+  resetLimiter,
+  authenticationController.resetPassword
 );
-router.post("/reset-password/reset", authenticationController.resetPassword);
 
 export default router;

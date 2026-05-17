@@ -10,6 +10,7 @@ const registrationRepository = new RegistrationRepository(pool);
 const registrationService = new RegistrationService(registrationRepository);
 const registrationController = new RegistrationController(registrationService);
 
-router.post("/register", registrationController.register);
+router.post("/register/owner", registrationController.registerOwner);
+router.post("/register/doctor", registrationController.registerDoctor);
 
 export default router;

@@ -1,11 +1,10 @@
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import * as dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthenticationRepository } from "./authentication.repository";
-import { UserRecord, UserResponse, JwtPayload } from "../../types";
+import { SafeUserRecord, UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
 import {
   getResetEmailHtml,
@@ -18,9 +17,13 @@ import {
 } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
-import { APP_NAME } from "../../core/config/email";
+import { APP_NAME, PASSWORD_RESET_EXPIRES_MINUTES } from "../../core/config/email";
+import { JWT_CONFIG } from "../../core/config/jwt";
+import { APP_CONFIG } from "../../core/config/app";
 
-dotenv.config();
+// Computed once at module load. Used in validateUser to ensure the "unknown email"
+// path always runs a full bcrypt comparison, preventing timing-based enumeration.
+const DUMMY_HASH = bcrypt.hashSync("__dummy__", 12);
 
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
@@ -30,13 +33,11 @@ export class AuthenticationService {
   }
 
   public generateAccessToken(payload: JwtPayload): string {
-    const secret = process.env.JWT_SECRET;
-
-    if (!secret) {
-      throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);
-    }
-
-    return jwt.sign(payload, secret, { expiresIn: "1h" });
+    return jwt.sign(payload, JWT_CONFIG.secret, {
+      expiresIn: JWT_CONFIG.expiresIn,
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
+    });
   }
 
   public async validateUser(
@@ -44,13 +45,15 @@ export class AuthenticationService {
     password: string
   ): Promise<UserResponse | null> {
     try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
-      if (!user) {
-        return null;
-      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
 
-      const isMatch = await bcrypt.compare(password, user.password_hash);
-      if (isMatch) {
+      // Always run bcrypt.compare so unknown-email and wrong-password paths
+      // take the same wall-clock time, preventing timing-based enumeration.
+      const hashToCompare = user ? user.password_hash : DUMMY_HASH;
+      const isMatch = await bcrypt.compare(password, hashToCompare);
+
+      if (user && isMatch) {
         return { id: user.id, email: user.email, role: user.role };
       }
 
@@ -60,7 +63,7 @@ export class AuthenticationService {
     }
   }
 
-  public async findUserById(id: string): Promise<UserRecord | null> {
+  public async findUserById(id: string): Promise<SafeUserRecord | null> {
     try {
       return await this.authenticationRepository.findUserById(id);
     } catch (err) {
@@ -68,38 +71,36 @@ export class AuthenticationService {
     }
   }
 
-  public async findOwnerIdByUserId(userId: string): Promise<string | null> {
-    try {
-      return await this.authenticationRepository.findOwnerIdByUserId(userId);
-    } catch (err) {
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
-  public async findDoctorIdByUserId(userId: string): Promise<string | null> {
-    try {
-      return await this.authenticationRepository.findDoctorIdByUserId(userId);
-    } catch (err) {
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
   public async startPasswordReset(email: string): Promise<void> {
     try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
       if (!user) {
-        throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
+        // Silently succeed — never reveal whether an email is registered.
+        return;
       }
 
-      const resetCode = crypto.randomInt(100000, 999999).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      // 32 random bytes -> ~256 bits of entropy. Raw token is base64url so it's
+      // URL-safe; only the SHA-256 hex digest is persisted, so a DB leak can't
+      // be used to reset anyone's password.
+      const rawToken = crypto.randomBytes(32).toString("base64url");
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+      const expiresAt = new Date(
+        Date.now() + PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000
+      );
 
+      await this.authenticationRepository.invalidatePreviousTokens(user.id);
       await this.authenticationRepository.createResetToken(
         user.id,
-        resetCode,
+        tokenHash,
         expiresAt
       );
-      await this.sendResetCodeEmail(email, resetCode);
+
+      const resetUrl = `${APP_CONFIG.frontendUrl}/auth/reset-password?token=${rawToken}`;
+      await this.sendResetLinkEmail(normalizedEmail, resetUrl);
     } catch (err) {
       if (err instanceof ClientError || err instanceof SystemError) {
         throw err;
@@ -108,9 +109,9 @@ export class AuthenticationService {
     }
   }
 
-  private async sendResetCodeEmail(
+  private async sendResetLinkEmail(
     toEmail: string,
-    resetCode: string
+    resetUrl: string
   ): Promise<void> {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
@@ -122,13 +123,16 @@ export class AuthenticationService {
       },
     } as SMTPTransport.Options);
 
-    const templateParams = { code: resetCode };
+    const templateParams = {
+      resetUrl,
+      expiresInMinutes: PASSWORD_RESET_EXPIRES_MINUTES,
+    };
 
     try {
       await transporter.sendMail({
         from: `"${APP_NAME}" <${process.env.MAIL_FROM}>`,
         to: [toEmail],
-        subject: getResetEmailSubject(templateParams),
+        subject: getResetEmailSubject(),
         text: getResetEmailText(templateParams),
         html: getResetEmailHtml(templateParams),
       });
@@ -137,52 +141,25 @@ export class AuthenticationService {
     }
   }
 
-  public async verifyResetCode(email: string, code: string): Promise<boolean> {
-    try {
-      const user = await this.authenticationRepository.findUserByEmail(email);
-      if (!user) {
-        return false;
-      }
-
-      const token = await this.authenticationRepository.findValidResetToken(
-        user.id,
-        code
-      );
-      return !!token;
-    } catch (err) {
-      if (err instanceof SystemError) throw err;
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
   public async resetPassword(
-    email: string,
-    code: string,
+    token: string,
     newPassword: string
   ): Promise<void> {
-    const user = await this.authenticationRepository.findUserByEmail(email);
-    if (!user) {
-      throw new ClientError(ClientErrorMessages.USER_NOT_FOUND, 404);
-    }
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const row = await this.authenticationRepository.findValidResetToken(tokenHash);
 
-    const token = await this.authenticationRepository.findValidResetToken(
-      user.id,
-      code
-    );
-
-    if (!token) {
-      throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
+    if (!row) {
+      throw new ClientError(ClientErrorMessages.INVALID_RESET_TOKEN, 400);
     }
 
     const hashedPassword = await hashPassword(newPassword);
 
     try {
       await this.authenticationRepository.updateUserPassword(
-        user.id,
-        hashedPassword,
-        "" // bcrypt salt is embedded in the hash
+        row.user_id,
+        hashedPassword
       );
-      await this.authenticationRepository.markResetTokenUsed(token.id);
+      await this.authenticationRepository.markResetTokenUsed(row.id);
     } catch (err) {
       throw new SystemError(SystemErrorMessages.DB_TRANSACTION_FAILED, err);
     }

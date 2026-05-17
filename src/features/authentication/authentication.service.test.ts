@@ -2,24 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthenticationService } from "./authentication.service";
 import { AuthenticationRepository } from "./authentication.repository";
 import * as jwt from "jsonwebtoken";
-import * as crypto from "crypto";
 import nodemailer from "nodemailer";
-import { ClientError } from "../../errors/ClientError";
 
-// Mock dependencies
 vi.mock("./authentication.repository");
 vi.mock("jsonwebtoken", () => ({
   sign: vi.fn(),
   verify: vi.fn(),
 }));
 vi.mock("nodemailer");
-vi.mock("crypto", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("crypto")>();
-  return {
-    ...actual,
-    randomInt: vi.fn(),
-  };
-});
 
 describe("AuthenticationService", () => {
   let authService: AuthenticationService;
@@ -32,32 +22,30 @@ describe("AuthenticationService", () => {
   });
 
   describe("generateAccessToken", () => {
-    it("should generate a token using JWT secret", () => {
-      process.env.JWT_SECRET = "test_secret";
-      const payload = { id: "123", email: "test@example.com", role: "owner" as any };
+    it("delegates to jwt.sign with the centralised JWT_CONFIG", () => {
+      const payload = {
+        id: "123",
+        email: "test@example.com",
+        role: "owner" as any,
+      };
       vi.mocked(jwt.sign).mockReturnValue("fake_token" as any);
 
       const token = authService.generateAccessToken(payload);
 
       expect(token).toBe("fake_token");
-      expect(jwt.sign).toHaveBeenCalledWith(payload, "test_secret", { expiresIn: "1h" });
-    });
-
-    it("should throw a SystemError if JWT_SECRET is missing", () => {
-      delete process.env.JWT_SECRET;
-      const payload = { id: "123", email: "test@example.com", role: "owner" as any };
-
-      expect(() => authService.generateAccessToken(payload)).toThrow();
+      expect(jwt.sign).toHaveBeenCalledWith(
+        payload,
+        expect.any(String),
+        expect.objectContaining({ expiresIn: expect.anything() })
+      );
     });
   });
 
   describe("startPasswordReset", () => {
-    it("should generate a reset token and send an email", async () => {
+    it("creates a token row and sends a link email when the user exists", async () => {
       const email = "test@example.com";
-      const user = { id: "user_123", email };
-      authRepo.findUserByEmail.mockResolvedValue(user);
-      vi.mocked(crypto.randomInt).mockReturnValue(123456 as any);
-      
+      authRepo.findUserByEmail.mockResolvedValue({ id: "user_123", email });
+
       const mockSendMail = vi.fn().mockResolvedValue({ messageId: "123" });
       vi.mocked(nodemailer.createTransport).mockReturnValue({
         sendMail: mockSendMail,
@@ -66,39 +54,63 @@ describe("AuthenticationService", () => {
       await authService.startPasswordReset(email);
 
       expect(authRepo.findUserByEmail).toHaveBeenCalledWith(email);
+      expect(authRepo.invalidatePreviousTokens).toHaveBeenCalledWith("user_123");
+      // (userId, sha256HexHash, expiresAt) — never the raw token.
       expect(authRepo.createResetToken).toHaveBeenCalledWith(
-        user.id,
-        "123456",
+        "user_123",
+        expect.stringMatching(/^[a-f0-9]{64}$/),
         expect.any(Date)
       );
       expect(mockSendMail).toHaveBeenCalled();
     });
 
-    it("should throw a ClientError if user is not found", async () => {
+    it("silently succeeds when the email is unknown (no DB writes, no mail)", async () => {
       authRepo.findUserByEmail.mockResolvedValue(null);
+      const mockSendMail = vi.fn();
+      vi.mocked(nodemailer.createTransport).mockReturnValue({
+        sendMail: mockSendMail,
+      } as any);
 
-      await expect(authService.startPasswordReset("wrong@example.com")).rejects.toThrow(ClientError);
+      await expect(
+        authService.startPasswordReset("unknown@example.com")
+      ).resolves.toBeUndefined();
+
+      expect(authRepo.invalidatePreviousTokens).not.toHaveBeenCalled();
+      expect(authRepo.createResetToken).not.toHaveBeenCalled();
+      expect(mockSendMail).not.toHaveBeenCalled();
     });
   });
 
-  describe("verifyResetCode", () => {
-    it("should return true if token is valid", async () => {
-      const email = "test@example.com";
-      const code = "123456";
-      const user = { id: "user_123", email };
-      authRepo.findUserByEmail.mockResolvedValue(user);
-      authRepo.findValidResetToken.mockResolvedValue({ id: "token_123" });
+  describe("resetPassword", () => {
+    it("rejects an unknown token with INVALID_RESET_TOKEN", async () => {
+      authRepo.findValidResetToken.mockResolvedValue(null);
 
-      const isValid = await authService.verifyResetCode(email, code);
+      await expect(
+        authService.resetPassword("bogus-token", "Password1!")
+      ).rejects.toThrow(/reset link/i);
 
-      expect(isValid).toBe(true);
-      expect(authRepo.findValidResetToken).toHaveBeenCalledWith(user.id, code);
+      expect(authRepo.updateUserPassword).not.toHaveBeenCalled();
+      expect(authRepo.markResetTokenUsed).not.toHaveBeenCalled();
     });
 
-    it("should return false if user is not found", async () => {
-      authRepo.findUserByEmail.mockResolvedValue(null);
-      const isValid = await authService.verifyResetCode("wrong@example.com", "123456");
-      expect(isValid).toBe(false);
+    it("updates the password and marks the token used on success", async () => {
+      authRepo.findValidResetToken.mockResolvedValue({
+        id: "token_1",
+        user_id: "user_123",
+      });
+      authRepo.updateUserPassword.mockResolvedValue(undefined);
+      authRepo.markResetTokenUsed.mockResolvedValue(undefined);
+
+      await authService.resetPassword("raw-token", "Password1!");
+
+      expect(authRepo.findValidResetToken).toHaveBeenCalledWith(
+        expect.stringMatching(/^[a-f0-9]{64}$/)
+      );
+      expect(authRepo.updateUserPassword).toHaveBeenCalledWith(
+        "user_123",
+        expect.any(String)
+      );
+      expect(authRepo.markResetTokenUsed).toHaveBeenCalledWith("token_1");
     });
   });
 });

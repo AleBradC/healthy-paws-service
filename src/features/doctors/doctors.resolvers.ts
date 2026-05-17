@@ -62,7 +62,7 @@ export const doctorsResolvers = {
   },
 
   Doctor: {
-    email: (doctor: Doctor) => getEmailDoctor(doctor.user_id),
+    email: (doctor: Doctor) => getEmailDoctor(doctor.id),
     specializations: async (
       doctor: Doctor,
       _: any,

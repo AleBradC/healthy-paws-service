@@ -16,7 +16,7 @@ export async function getAllOwners(): Promise<Owner[]> {
 }
 
 export async function getOwnerById(id: string): Promise<Owner | null> {
-  const query = `SELECT id, name, user_id FROM Owners WHERE id = $1;`;
+  const query = `SELECT id, name FROM Owners WHERE id = $1;`;
   try {
     const result = await pool.query(query, [id]);
     return result.rows[0] || null;
@@ -25,10 +25,11 @@ export async function getOwnerById(id: string): Promise<Owner | null> {
   }
 }
 
-export async function getOwnerEmail(userId: string): Promise<string | null> {
+// ownerId IS users.id (shared primary key, see database.sql).
+export async function getOwnerEmail(ownerId: string): Promise<string | null> {
   const query = `SELECT email FROM Users WHERE id = $1;`;
   try {
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [ownerId]);
     return result.rows[0]?.email || null;
   } catch (err) {
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
@@ -57,7 +58,7 @@ export async function updateOwnerProfile(
     UPDATE Owners
     SET name = $1
     WHERE id = $2
-    RETURNING id, name, user_id;
+    RETURNING id, name;
   `;
 
   try {

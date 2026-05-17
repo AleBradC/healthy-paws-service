@@ -5,20 +5,19 @@ CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    password_salt TEXT NOT NULL,
     role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor')),
     image_url TEXT
 );
 
+-- Users.id as primary key (1:1 relationship).
+-- One UUID covers authentication (Users lookup), account identity, and
 CREATE TABLE Owners (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY REFERENCES Users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE Doctors (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY REFERENCES Users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     clinic_name VARCHAR(255),
     clinic_address VARCHAR(255)
@@ -80,8 +79,8 @@ CREATE TABLE Appointments (
     investigation_result TEXT
 );
 
-CREATE UNIQUE INDEX unq_doctor_appointment_active 
-ON Appointments (doctor_id, appointment_datetime) 
+CREATE UNIQUE INDEX unq_doctor_appointment_active
+ON Appointments (doctor_id, appointment_datetime)
 WHERE status NOT IN ('Cancelled', 'Denied');
 
 -- Keep Specializations as a simple lookup table
@@ -115,20 +114,20 @@ CREATE TABLE Doctor_Service_Pricing (
     service_id UUID NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     CONSTRAINT unq_doctor_service_specialization UNIQUE (doctor_id, specialization_id, service_id),
-    FOREIGN KEY (doctor_id, specialization_id) 
-      REFERENCES Doctor_Specializations(doctor_id, specialization_id) 
+    FOREIGN KEY (doctor_id, specialization_id)
+      REFERENCES Doctor_Specializations(doctor_id, specialization_id)
       ON DELETE CASCADE,
-    FOREIGN KEY (specialization_id, service_id) 
-      REFERENCES Specialization_Services(specialization_id, service_id) 
+    FOREIGN KEY (specialization_id, service_id)
+      REFERENCES Specialization_Services(specialization_id, service_id)
       ON DELETE CASCADE
 );
 
 CREATE TABLE PasswordResetTokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
-  reset_code VARCHAR(6) NOT NULL,
+  token_hash VARCHAR(64) NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   used BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX idx_reset_code_user ON PasswordResetTokens(reset_code, user_id);
+CREATE INDEX idx_token_hash ON PasswordResetTokens(token_hash);

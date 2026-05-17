@@ -1,12 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 import { ROLES } from "./constants";
 
-// Row from Users table (DB record, includes all fields)
+// Row from Users table (DB record, includes all fields).
+// Only use this where password_hash is explicitly required (e.g. validateUser).
 export interface UserRecord {
   id: string;
   email: string;
   password_hash: string;
-  password_salt: string;
+  role: ROLES;
+}
+
+// Projection of Users row without credentials.
+// Use as the return type of any lookup that does NOT need the password hash.
+export interface SafeUserRecord {
+  id: string;
+  email: string;
   role: ROLES;
 }
 
@@ -14,7 +22,6 @@ export interface UserRecord {
 export interface CreateOwnerArgs {
   email: string;
   hash: string;
-  salt: string;
   role: ROLES.OWNER_ROLE;
   ownerName: string;
   petData: PetPayload;
@@ -22,7 +29,6 @@ export interface CreateOwnerArgs {
 export interface CreateDoctorArgs {
   email: string;
   hash: string;
-  salt: string;
   role: ROLES.DOCTOR_ROLE;
   doctorData: DoctorPayload;
 }
@@ -38,11 +44,13 @@ export interface UserResponse {
 }
 
 export interface JwtPayload {
-  id: string;
+  id:   string;
   email: string;
-  role: ROLES;
-  iat?: number;
-  exp?: number;
+  role:  ROLES;
+  iss?:  string;
+  aud?:  string | string[];
+  iat?:  number;
+  exp?:  number;
 }
 
 // Registration owner payload (request DTO)
@@ -50,7 +58,6 @@ export interface OwnerPayload {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
 }
 export interface PetPayload {
   name: string;
@@ -73,7 +80,6 @@ export interface DoctorPayload {
   name: string;
   email: string;
   password?: string;
-  confirmPassword?: string;
   clinicName: string;
   clinicAddress: string;
   specializations: DoctorSpecializationPayload[];
@@ -117,16 +123,9 @@ export interface FindUserByIdParams {
 export interface FindUserByEmailParams {
   email: string;
 }
-export interface FindOwnerIdByUserIdParams {
-  userId: string;
-}
-export interface FindDoctorIdByUserIdParams {
-  userId: string;
-}
 export interface UpdateUserPasswordParams {
   userId: string;
   hash: string;
-  salt: string;
 }
 
 /* ----------------------------------------------------------
@@ -182,17 +181,8 @@ export type PasswordResetTokens = {
 
 // --- GRAPHQL ENTITY TYPES ---
 
-export interface User {
-  id: string;
-  email: string;
-  hash?: string;
-  salt?: string;
-  role: "owner" | "doctor";
-}
-
 export interface Owner {
   id: string;
-  user_id: string;
   name: string;
   email?: string;
   pets?: Pet[];
@@ -201,7 +191,6 @@ export interface Owner {
 
 export interface Doctor {
   id: string;
-  user_id: string;
   name: string;
   email?: string;
   clinic_name?: string;
