@@ -10,7 +10,6 @@ import pool from "../config/db";
 import { JWT_CONFIG } from "../config/jwt";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
-import { ClientErrorMessages } from "../../errors/constants";
 import { JwtPayload } from "../../types";
 
 const authenticationRepository = new AuthenticationRepository(pool);
@@ -25,9 +24,9 @@ passport.use(
       try {
         const user = await authenticationService.validateUser(email, password);
         if (!user) {
-          return done(null, false, {
-            message: ClientErrorMessages.INVALID_CREDENTIALS,
-          });
+          // No message — the controller decides what the client sees so
+          // strategy-level strings can't leak through info.message.
+          return done(null, false);
         }
 
         return done(null, user);

@@ -20,21 +20,17 @@ export class AuthenticationController {
     passport.authenticate(
       "local",
       { session: false },
-      async (
-        err: Error | null,
-        user: UserResponse | false,
-        info: { message?: string }
-      ) => {
+      async (err: Error | null, user: UserResponse | false) => {
         if (err) {
           return next(err);
         }
 
         if (!user) {
+          // Single fixed message — never pass through strategy-supplied strings,
+          // to avoid leaking richer states (account locked, internal errors, etc.)
+          // to the client.
           return next(
-            new ClientError(
-              info?.message || ClientErrorMessages.INVALID_CREDENTIALS,
-              401
-            )
+            new ClientError(ClientErrorMessages.INVALID_CREDENTIALS, 401)
           );
         }
 
