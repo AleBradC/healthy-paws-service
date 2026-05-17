@@ -22,6 +22,7 @@ import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
+import { buildOpenApiDocument } from "./openapi/registry";
 
 import { resolvers } from "./schema/resolvers";
 import { requireAuthMutations } from "./schema/plugins/requireAuthMutations";
@@ -62,6 +63,14 @@ app.use(passport.initialize());
 // REST Routes
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
+
+// OpenAPI spec for the REST surface. Served as static JSON so external
+// clients (mobile apps, integrations) can codegen against a typed contract.
+// The document is built once at startup from the same Zod schemas the
+// runtime validates against, so it can never drift from the implementation.
+app.get("/api/openapi.json", (_req, res) => {
+  res.json(buildOpenApiDocument());
+});
 
 const startServer = async () => {
   const typeDefs = readFileSync(
