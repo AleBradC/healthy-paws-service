@@ -132,11 +132,15 @@ export class AuthenticationController {
     res.json({ status: "success", message: "Logged out." });
   };
 
+  // GET /api/auth/session — state-inquiry endpoint. Always 200; the body's
+  // `data` is the user when there's a valid session and null otherwise.
+  // Keeps DevTools clean on cold boot and lets the client treat
+  // logged-in/logged-out as the same code path.
   public session = (req: Request, res: Response): void => {
-    if (!req.user) {
-      res.status(401).json({ status: "error", message: "Unauthorised." });
-      return;
-    }
-    res.json({ status: "success", data: req.user });
+    const response: ApiResponse<UserResponse | null> = {
+      status: "success",
+      data: (req.user as UserResponse | undefined) ?? null,
+    };
+    res.json(response);
   };
 }
