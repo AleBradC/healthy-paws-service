@@ -17,8 +17,9 @@ import {
 } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
-import { APP_NAME } from "../../core/config/email";
+import { APP_NAME, PASSWORD_RESET_EXPIRES_MINUTES } from "../../core/config/email";
 import { JWT_CONFIG } from "../../core/config/jwt";
+import { APP_CONFIG } from "../../core/config/app";
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
@@ -79,17 +80,27 @@ export class AuthenticationService {
         return;
       }
 
-      const resetCode = crypto.randomInt(100000, 999999).toString();
-      const codeHash = crypto.createHash("sha256").update(resetCode).digest("hex");
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      // 32 random bytes -> ~256 bits of entropy. Raw token is base64url so it's
+      // URL-safe; only the SHA-256 hex digest is persisted, so a DB leak can't
+      // be used to reset anyone's password.
+      const rawToken = crypto.randomBytes(32).toString("base64url");
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+      const expiresAt = new Date(
+        Date.now() + PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000
+      );
 
       await this.authenticationRepository.invalidatePreviousTokens(user.id);
       await this.authenticationRepository.createResetToken(
         user.id,
-        codeHash,
+        tokenHash,
         expiresAt
       );
-      await this.sendResetCodeEmail(normalizedEmail, resetCode); // raw code goes only to email
+
+      const resetUrl = `${APP_CONFIG.frontendUrl}/auth/reset-password?token=${rawToken}`;
+      await this.sendResetLinkEmail(normalizedEmail, resetUrl);
     } catch (err) {
       if (err instanceof ClientError || err instanceof SystemError) {
         throw err;
@@ -98,9 +109,9 @@ export class AuthenticationService {
     }
   }
 
-  private async sendResetCodeEmail(
+  private async sendResetLinkEmail(
     toEmail: string,
-    resetCode: string
+    resetUrl: string
   ): Promise<void> {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
@@ -112,13 +123,16 @@ export class AuthenticationService {
       },
     } as SMTPTransport.Options);
 
-    const templateParams = { code: resetCode };
+    const templateParams = {
+      resetUrl,
+      expiresInMinutes: PASSWORD_RESET_EXPIRES_MINUTES,
+    };
 
     try {
       await transporter.sendMail({
         from: `"${APP_NAME}" <${process.env.MAIL_FROM}>`,
         to: [toEmail],
-        subject: getResetEmailSubject(templateParams),
+        subject: getResetEmailSubject(),
         text: getResetEmailText(templateParams),
         html: getResetEmailHtml(templateParams),
       });
@@ -127,53 +141,25 @@ export class AuthenticationService {
     }
   }
 
-  public async verifyResetCode(email: string, code: string): Promise<boolean> {
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
-      if (!user) {
-        return false;
-      }
-
-      const codeHash = crypto.createHash("sha256").update(code).digest("hex");
-      const token = await this.authenticationRepository.findValidResetToken(
-        user.id,
-        codeHash
-      );
-      return !!token;
-    } catch (err) {
-      if (err instanceof SystemError) throw err;
-      throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-    }
-  }
-
   public async resetPassword(
-    email: string,
-    code: string,
+    token: string,
     newPassword: string
   ): Promise<void> {
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const row = await this.authenticationRepository.findValidResetToken(tokenHash);
 
-    // If the email is unknown there can be no valid token — fall through to the
-    // same "invalid code" error as a wrong code, so email existence is not revealed.
-    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
-    const token = user
-      ? await this.authenticationRepository.findValidResetToken(user.id, codeHash)
-      : null;
-
-    if (!token || !user) {
-      throw new ClientError(ClientErrorMessages.INVALID_RESET_CODE, 400);
+    if (!row) {
+      throw new ClientError(ClientErrorMessages.INVALID_RESET_TOKEN, 400);
     }
 
     const hashedPassword = await hashPassword(newPassword);
 
     try {
       await this.authenticationRepository.updateUserPassword(
-        user.id,
+        row.user_id,
         hashedPassword
       );
-      await this.authenticationRepository.markResetTokenUsed(token.id);
+      await this.authenticationRepository.markResetTokenUsed(row.id);
     } catch (err) {
       throw new SystemError(SystemErrorMessages.DB_TRANSACTION_FAILED, err);
     }

@@ -28,14 +28,9 @@ router.get(
   authenticationController.session
 );
 router.post(
-  "/reset-password/send-code",
+  "/reset-password/request",
   sendCodeLimiter,
   authenticationController.startPasswordReset
-);
-router.post(
-  "/reset-password/verify-code",
-  resetLimiter,
-  authenticationController.verifyResetCode
 );
 router.post(
   "/reset-password/reset",

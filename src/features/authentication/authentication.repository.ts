@@ -33,25 +33,23 @@ export class AuthenticationRepository {
 
   public async createResetToken(
     userId: string,
-    resetCode: string,
+    tokenHash: string,
     expiresAt: Date
   ): Promise<void> {
     await this.db.query(
-      `INSERT INTO PasswordResetTokens (user_id, reset_code, expires_at) 
+      `INSERT INTO PasswordResetTokens (user_id, token_hash, expires_at)
        VALUES ($1, $2, $3)`,
-      [userId, resetCode, expiresAt]
+      [userId, tokenHash, expiresAt]
     );
   }
 
   public async findValidResetToken(
-    userId: string,
-    code: string
-  ): Promise<{ id: string } | null> {
-    const now = new Date();
+    tokenHash: string
+  ): Promise<{ id: string; user_id: string } | null> {
     const result = await this.db.query(
-      `SELECT id FROM PasswordResetTokens 
-       WHERE user_id = $1 AND reset_code = $2 AND expires_at > $3 AND used = false`,
-      [userId, code, now]
+      `SELECT id, user_id FROM PasswordResetTokens
+       WHERE token_hash = $1 AND used = false AND expires_at > now()`,
+      [tokenHash]
     );
     return result.rows[0] || null;
   }

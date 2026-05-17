@@ -5,7 +5,7 @@ export enum ClientErrorMessages {
   OWNER_AND_ANIMAL_REQUIRED = "Owner and animal details are required.",
   DOCTOR_DETAILS_REQUIRED = "Doctor details are required.",
   INVALID_ROLE = "A valid role ('owner' or 'doctor') must be specified.",
-  INVALID_RESET_CODE = "Invalid or expired reset code.",
+  INVALID_RESET_TOKEN = "Invalid or expired reset link.",
   EMAIL_REQUIRED = "Email is required.",
   NEW_PASSWORD_REQUIRED = "New password is required.",
   REGISTRATION_FAILED = "Registration failed. Please try again later.",
@@ -15,6 +15,7 @@ export enum ClientErrorMessages {
 
 export enum SystemErrorMessages {
   JWT_SECRET_UNDEFINED = "CRITICAL: JWT_SECRET is not defined in environment variables.",
+  FRONTEND_URL_UNDEFINED = "CRITICAL: FRONTEND_URL is not defined in production environment.",
   DB_TRANSACTION_FAILED = "Database transaction failed and was rolled back.",
   DB_QUERY_FAILED = "Database query failed.",
   MAIL_PROVIDER_ERROR = "Failed to send email via the provider.",
@@ -22,8 +23,7 @@ export enum SystemErrorMessages {
 
 export enum SuccessMessages {
   LOGIN_SUCCESS = "Logged in successfully.",
-  RESET_CODE_SENT = "If this email is registered, you will receive a reset code.",
-  RESET_CODE_VERIFIED = "Code verified successfully.",
+  RESET_LINK_SENT = "If this email is registered, you will receive a password reset link.",
   PASSWORD_RESET_SUCCESS = "Password reset successfully.",
   OWNER_REGISTERED = "Pet owner registered successfully.",
   DOCTOR_REGISTERED = "Doctor registered successfully.",
