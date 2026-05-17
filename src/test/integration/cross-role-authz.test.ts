@@ -46,8 +46,9 @@ vi.mock("../../features/pets/pets.service", () => ({
 
 import { resolvers } from "../../schema/resolvers";
 import { requireAuthMutations } from "../../schema/plugins/requireAuthMutations";
+import type { GraphQLContext } from "../../schema/loaders";
 
-let server: ApolloServer;
+let server: ApolloServer<GraphQLContext>;
 
 beforeAll(async () => {
   const typeDefs = readFileSync(
@@ -55,7 +56,7 @@ beforeAll(async () => {
     "utf-8"
   );
 
-  server = new ApolloServer({
+  server = new ApolloServer<GraphQLContext>({
     typeDefs,
     resolvers,
     introspection: true,
@@ -91,7 +92,7 @@ describe("Schema-level authorization", () => {
   it("rejects unauthenticated mutations at the operation level (no resolver runs)", async () => {
     // requireAuthMutations runs in didResolveOperation, so the mocked service
     // method MUST NOT be called when there is no user.
-    const { petsService } = await import("../../features/pets/pets.service");
+    const { petsService } = await import("../../features/pets/pets.service.js");
     const createPet = vi.mocked(petsService.createPet);
     createPet.mockClear();
 
@@ -128,7 +129,7 @@ describe("Schema-level authorization", () => {
 
   it("permits a query when a user is present in the context", async () => {
     const { doctorsService } = await import(
-      "../../features/doctors/doctors.service"
+      "../../features/doctors/doctors.service.js"
     );
     vi.mocked(doctorsService.getAllSpecializations).mockResolvedValue([
       { id: "spec-1", name: "Dermatology" } as never,
@@ -160,7 +161,7 @@ describe("Schema-level authorization", () => {
   });
 
   it("propagates a service-layer FORBIDDEN error when a user requests another owner's pet", async () => {
-    const { petsService } = await import("../../features/pets/pets.service");
+    const { petsService } = await import("../../features/pets/pets.service.js");
     const { GraphQLError } = await import("graphql");
     // Cross-role authz is enforced inside the service. Simulate the service
     // throwing FORBIDDEN to verify the schema surfaces it cleanly to clients.
