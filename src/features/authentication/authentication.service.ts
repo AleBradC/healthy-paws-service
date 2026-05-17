@@ -32,12 +32,20 @@ export class AuthenticationService {
     this.authenticationRepository = authRepository;
   }
 
-  public generateAccessToken(payload: JwtPayload): string {
-    return jwt.sign(payload, JWT_CONFIG.secret, {
+  public generateAccessToken(payload: JwtPayload): {
+    token: string;
+    expiresAtMs: number;
+  } {
+    const token = jwt.sign(payload, JWT_CONFIG.secret, {
       expiresIn: JWT_CONFIG.expiresIn,
       issuer: JWT_CONFIG.issuer,
       audience: JWT_CONFIG.audience,
     });
+    const decoded = jwt.decode(token) as { exp?: number } | null;
+    if (!decoded?.exp) {
+      throw new SystemError(SystemErrorMessages.JWT_SIGN_FAILED);
+    }
+    return { token, expiresAtMs: decoded.exp * 1000 };
   }
 
   public async validateUser(

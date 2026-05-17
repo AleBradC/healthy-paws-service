@@ -19,7 +19,6 @@ type Owner {
   name: String!
   email: String
   pets: [Pet!]
-  appointments: [Appointment!]
 }
 
 type Doctor {
@@ -104,7 +103,6 @@ type Query {
   specializations: [Specialization!]!
   doctor(id: ID!): Doctor
 
-  owners: [Owner!]
   owner(id: ID!): Owner
 
   pet(id: ID!): Pet

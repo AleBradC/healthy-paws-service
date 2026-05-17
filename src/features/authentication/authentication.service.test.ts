@@ -8,6 +8,7 @@ vi.mock("./authentication.repository");
 vi.mock("jsonwebtoken", () => ({
   sign: vi.fn(),
   verify: vi.fn(),
+  decode: vi.fn(),
 }));
 vi.mock("nodemailer");
 
@@ -22,22 +23,37 @@ describe("AuthenticationService", () => {
   });
 
   describe("generateAccessToken", () => {
-    it("delegates to jwt.sign with the centralised JWT_CONFIG", () => {
+    it("delegates to jwt.sign with the centralised JWT_CONFIG and returns expiry derived from the token", () => {
+      const payload = {
+        id: "123",
+        email: "test@example.com",
+        role: "owner" as any,
+      };
+      const futureSec = Math.floor(Date.now() / 1000) + 3600;
+      vi.mocked(jwt.sign).mockReturnValue("fake_token" as any);
+      vi.mocked(jwt.decode).mockReturnValue({ exp: futureSec } as any);
+
+      const result = authService.generateAccessToken(payload);
+
+      expect(result.token).toBe("fake_token");
+      expect(result.expiresAtMs).toBe(futureSec * 1000);
+      expect(jwt.sign).toHaveBeenCalledWith(
+        payload,
+        expect.any(String),
+        expect.objectContaining({ expiresIn: expect.anything() })
+      );
+    });
+
+    it("throws when the signed token cannot be decoded for an exp claim", () => {
       const payload = {
         id: "123",
         email: "test@example.com",
         role: "owner" as any,
       };
       vi.mocked(jwt.sign).mockReturnValue("fake_token" as any);
+      vi.mocked(jwt.decode).mockReturnValue(null as any);
 
-      const token = authService.generateAccessToken(payload);
-
-      expect(token).toBe("fake_token");
-      expect(jwt.sign).toHaveBeenCalledWith(
-        payload,
-        expect.any(String),
-        expect.objectContaining({ expiresIn: expect.anything() })
-      );
+      expect(() => authService.generateAccessToken(payload)).toThrow();
     });
   });
 

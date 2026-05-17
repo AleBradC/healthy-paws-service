@@ -5,26 +5,6 @@ import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
 import { OwnerErrorMessages, SystemErrorMessages } from "../../errors/constants";
 
-export async function getAllOwners(): Promise<Owner[]> {
-  const query = `SELECT * FROM Owners;`;
-  try {
-    const result = await pool.query(query);
-    return result.rows;
-  } catch (err) {
-    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-  }
-}
-
-export async function getOwnerById(id: string): Promise<Owner | null> {
-  const query = `SELECT id, name FROM Owners WHERE id = $1;`;
-  try {
-    const result = await pool.query(query, [id]);
-    return result.rows[0] || null;
-  } catch (err) {
-    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-  }
-}
-
 // ownerId IS users.id (shared primary key, see database.sql).
 export async function getOwnerEmail(ownerId: string): Promise<string | null> {
   const query = `SELECT email FROM Users WHERE id = $1;`;

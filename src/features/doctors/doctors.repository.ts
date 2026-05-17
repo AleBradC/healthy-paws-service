@@ -125,43 +125,6 @@ export async function getEmailDoctor(doctorId: string): Promise<string | null> {
   }
 }
 
-export async function getSpecializationsByDoctor(
-  doctorId: string
-): Promise<Specialization[]> {
-  const query = `
-    SELECT s.id, s.name 
-    FROM Doctor_Specializations ds
-    JOIN Specializations s ON ds.specialization_id = s.id
-    WHERE ds.doctor_id = $1;
-  `;
-  try {
-    const result = await pool.query(query, [doctorId]);
-    return result.rows;
-  } catch (err) {
-    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-  }
-}
-
-export async function getServicesByDoctor(
-  doctorId: string
-): Promise<Service[]> {
-  const query = `
-    SELECT s.id, dsp.specialization_id, s.name, dsp.price
-    FROM Doctor_Service_Pricing AS dsp
-    JOIN Services AS s ON dsp.service_id = s.id
-    WHERE dsp.doctor_id = $1;
-  `;
-  try {
-    const result = await pool.query(query, [doctorId]);
-    return result.rows.map((row: Record<string, any>) => ({
-      ...row,
-      price: row.price != null ? parseFloat(row.price) : 0.0,
-    } as Service));
-  } catch (err) {
-    throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
-  }
-}
-
 export async function getServicesByDoctorAndSpecialization(
   doctorId: string,
   specializationId: string

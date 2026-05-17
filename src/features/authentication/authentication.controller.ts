@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response, CookieOptions } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
 import { JwtPayload, UserResponse, ApiResponse } from "../../types";
@@ -8,6 +8,19 @@ import {
 } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import {requestResetSchema, resetSchema} from "./authentication.helpers";
+
+// Shared cookie options for the access-token cookie.
+// httpOnly: cookie is invisible to JS, eliminating the XSS token-theft vector.
+// sameSite=strict: cookie is never sent on cross-site requests, providing
+// built-in CSRF protection for state-changing requests.
+// secure: only set in production so dev (http) still works.
+// All of these MUST match on clearCookie or some browsers ignore the clear.
+const ACCESS_COOKIE_BASE_OPTIONS: CookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+};
 
 export class AuthenticationController {
   private authenticationService: AuthenticationService;
@@ -40,16 +53,14 @@ export class AuthenticationController {
             email: user.email,
             role: user.role,
           };
-          const token = this.authenticationService.generateAccessToken(payload);
+          const { token, expiresAtMs } =
+            this.authenticationService.generateAccessToken(payload);
 
-          // Store the JWT in an httpOnly cookie — inaccessible to JavaScript,
-          // eliminating the XSS token-theft vector.
+          // Cookie lifetime is derived from the JWT's own exp claim so the
+          // two cannot drift if JWT_EXPIRES_IN is changed.
           res.cookie("accessToken", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 60 * 60 * 1000, // 1 hour — matches JWT expiresIn
-            path: "/",
+            ...ACCESS_COOKIE_BASE_OPTIONS,
+            maxAge: Math.max(0, expiresAtMs - Date.now()),
           });
 
           const response: ApiResponse<{ role: string; id: string }> = {
@@ -115,7 +126,9 @@ export class AuthenticationController {
   };
 
   public logout = (_req: Request, res: Response): void => {
-    res.clearCookie("accessToken", { path: "/" });
+    // Must pass the same attributes used when setting the cookie, otherwise
+    // some browsers refuse to clear it.
+    res.clearCookie("accessToken", ACCESS_COOKIE_BASE_OPTIONS);
     res.json({ status: "success", message: "Logged out." });
   };
 

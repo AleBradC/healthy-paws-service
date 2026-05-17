@@ -9,6 +9,7 @@ import bodyParser from "body-parser";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
+import { ApolloArmor } from "@escape.tech/graphql-armor";
 import { readFileSync } from "fs";
 import path from "path";
 
@@ -68,13 +69,29 @@ const startServer = async () => {
     { encoding: "utf-8" }
   );
 
+  // graphql-armor provides depth limit, cost limit, alias/directive/token limit
+  // and disables field suggestions. Introspection is disabled in production
+  // explicitly so error messages cannot leak the schema shape.
+  const armor = new ApolloArmor({
+    blockFieldSuggestion: { enabled: true },
+    maxDepth: { n: 8 },
+    costLimit: { maxCost: 5000 },
+    maxAliases: { n: 15 },
+    maxDirectives: { n: 50 },
+    maxTokens: { n: 1000 },
+  });
+  const armorProtection = armor.protect();
+
   const server = new ApolloServer({
     typeDefs,
     resolvers,
+    introspection: process.env.NODE_ENV !== "production",
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       requireAuthMutations,
+      ...armorProtection.plugins,
     ],
+    validationRules: [...armorProtection.validationRules],
   });
 
   try {
@@ -100,7 +117,15 @@ const startServer = async () => {
     app.use(
       "/graphql",
       (req, res, next) => {
+        // GraphQL accepts both authenticated and anonymous requests; the
+        // requireAuthMutations plugin and per-resolver requireAuth wrappers
+        // enforce gating. Only forward truly unexpected errors here — a
+        // missing or invalid token is normal and must fall through as
+        // anonymous so unauthenticated queries can still be evaluated.
         passport.authenticate("jwt", { session: false }, (err: any, user: any) => {
+          if (err) {
+            return next(err);
+          }
           if (user) {
             req.user = user;
           }
