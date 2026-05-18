@@ -17,7 +17,7 @@ FROM development AS builder
 RUN npm run build
 
 # Runtime stage
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
 WORKDIR /app
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthenticationService } from "./authentication.service";
 import { AuthenticationRepository } from "./authentication.repository";
 import * as jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
+import { sendMail } from "../../core/mailer";
 
 vi.mock("./authentication.repository");
 vi.mock("jsonwebtoken", () => ({
@@ -10,7 +10,11 @@ vi.mock("jsonwebtoken", () => ({
   verify: vi.fn(),
   decode: vi.fn(),
 }));
-vi.mock("nodemailer");
+vi.mock("../../core/mailer", () => ({
+  sendMail: vi.fn(),
+}));
+
+const mockedSendMail = vi.mocked(sendMail);
 
 describe("AuthenticationService", () => {
   let authService: AuthenticationService;
@@ -61,11 +65,7 @@ describe("AuthenticationService", () => {
     it("creates a token row and sends a link email when the user exists", async () => {
       const email = "test@example.com";
       authRepo.findUserByEmail.mockResolvedValue({ id: "user_123", email });
-
-      const mockSendMail = vi.fn().mockResolvedValue({ messageId: "123" });
-      vi.mocked(nodemailer.createTransport).mockReturnValue({
-        sendMail: mockSendMail,
-      } as any);
+      mockedSendMail.mockResolvedValue(undefined);
 
       await authService.startPasswordReset(email);
 
@@ -77,15 +77,14 @@ describe("AuthenticationService", () => {
         expect.stringMatching(/^[a-f0-9]{64}$/),
         expect.any(Date)
       );
-      expect(mockSendMail).toHaveBeenCalled();
+      expect(mockedSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: email })
+      );
     });
 
     it("silently succeeds when the email is unknown (no DB writes, no mail)", async () => {
       authRepo.findUserByEmail.mockResolvedValue(null);
-      const mockSendMail = vi.fn();
-      vi.mocked(nodemailer.createTransport).mockReturnValue({
-        sendMail: mockSendMail,
-      } as any);
+      mockedSendMail.mockResolvedValue(undefined);
 
       await expect(
         authService.startPasswordReset("unknown@example.com")
@@ -93,7 +92,7 @@ describe("AuthenticationService", () => {
 
       expect(authRepo.invalidatePreviousTokens).not.toHaveBeenCalled();
       expect(authRepo.createResetToken).not.toHaveBeenCalled();
-      expect(mockSendMail).not.toHaveBeenCalled();
+      expect(mockedSendMail).not.toHaveBeenCalled();
     });
   });
 

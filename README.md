@@ -61,11 +61,10 @@ DB_DATABASE=healthypaws
 DB_PASSWORD=your_password
 DB_PORT=5432
 JWT_SECRET=your_secret_key
-MAIL_HOST=your_smtp_host
-MAIL_PORT=587
-MAIL_USER=your_smtp_user
-MAIL_PASSWORD=your_smtp_password
-MAIL_FROM=no-reply@healthypaws.com
+# Resend SMTP key (https://resend.com). Leave empty for local dev — the
+# mailer falls back to printing emails to stdout in that case.
+RESEND_API_KEY=
+MAIL_FROM=onboarding@resend.dev
 ```
 
 ### Running the Service

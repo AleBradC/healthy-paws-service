@@ -1,6 +1,4 @@
 import * as crypto from "crypto";
-import nodemailer from "nodemailer";
-import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { EmailVerificationRepository } from "./email-verification.repository";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
@@ -13,11 +11,9 @@ import {
   getVerificationEmailSubject,
   getVerificationEmailText,
 } from "../../email-template";
-import {
-  APP_NAME,
-  EMAIL_VERIFICATION_EXPIRES_HOURS,
-} from "../../core/config/email";
+import { EMAIL_VERIFICATION_EXPIRES_HOURS } from "../../core/config/email";
 import { APP_CONFIG } from "../../core/config/app";
+import { sendMail } from "../../core/mailer";
 
 // Mirrors PasswordResetTokens semantics: random 32-byte token, persist only
 // the SHA-256 hex digest, 24h expiry by default. Raw token leaves the system
@@ -115,26 +111,14 @@ export class EmailVerificationService {
     rawToken: string
   ): Promise<void> {
     const verifyUrl = `${APP_CONFIG.frontendUrl}/auth/verify-email?token=${rawToken}`;
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: Number(process.env.MAIL_PORT),
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    } as SMTPTransport.Options);
-
     const params = {
       verifyUrl,
       expiresInHours: EMAIL_VERIFICATION_EXPIRES_HOURS,
     };
 
     try {
-      await transporter.sendMail({
-        from: `"${APP_NAME}" <${process.env.MAIL_FROM}>`,
-        to: [toEmail],
+      await sendMail({
+        to: toEmail,
         subject: getVerificationEmailSubject(),
         text: getVerificationEmailText(params),
         html: getVerificationEmailHtml(params),
