@@ -25,6 +25,19 @@ import { APP_CONFIG } from "../../core/config/app";
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
 const DUMMY_HASH = bcrypt.hashSync("__dummy__", 12);
 
+// Discriminated union returned by validateUser. The LocalStrategy converts
+// these into Passport done(...) calls; the controller then translates to a
+// distinct HTTP response per branch.
+//
+// Enumeration safety contract: an attacker who supplies a wrong password
+// MUST receive `invalid-credentials` regardless of whether the email exists.
+// Only after a correct password match do we differentiate between verified
+// and unverified accounts.
+export type ValidateUserResult =
+  | { status: "ok"; user: UserResponse }
+  | { status: "invalid-credentials" }
+  | { status: "email-not-verified"; userId: string; email: string };
+
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
 
@@ -51,7 +64,7 @@ export class AuthenticationService {
   public async validateUser(
     email: string,
     password: string
-  ): Promise<UserResponse | null> {
+  ): Promise<ValidateUserResult> {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
@@ -61,11 +74,21 @@ export class AuthenticationService {
       const hashToCompare = user ? user.password_hash : DUMMY_HASH;
       const isMatch = await bcrypt.compare(password, hashToCompare);
 
-      if (user && isMatch) {
-        return { id: user.id, email: user.email, role: user.role };
+      if (!user || !isMatch) {
+        return { status: "invalid-credentials" };
       }
 
-      return null;
+      if (!user.email_verified) {
+        // Reached only after a correct password — revealing "unverified" here
+        // does not help an attacker beyond what they already know (they typed
+        // the right password).
+        return { status: "email-not-verified", userId: user.id, email: user.email };
+      }
+
+      return {
+        status: "ok",
+        user: { id: user.id, email: user.email, role: user.role },
+      };
     } catch (err) {
       throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, err);
     }
@@ -149,10 +172,12 @@ export class AuthenticationService {
     }
   }
 
+  // Returns the affected user_id so the controller can record an audit event
+  // tied to the right account without re-querying.
   public async resetPassword(
     token: string,
     newPassword: string
-  ): Promise<void> {
+  ): Promise<string> {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const row = await this.authenticationRepository.findValidResetToken(tokenHash);
 
@@ -168,6 +193,7 @@ export class AuthenticationService {
         hashedPassword
       );
       await this.authenticationRepository.markResetTokenUsed(row.id);
+      return row.user_id;
     } catch (err) {
       throw new SystemError(SystemErrorMessages.DB_TRANSACTION_FAILED, err);
     }

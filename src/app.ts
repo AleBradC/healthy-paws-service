@@ -1,6 +1,12 @@
 import "dotenv/config";
 
+// Sentry MUST be imported and initialised before any other module that touches
+// http/https or Express — the SDK monkey-patches those globals at import time.
+import { initSentry } from "./core/observability/sentry";
+initSentry();
+
 import express from "express";
+import * as Sentry from "@sentry/node";
 import http from "http";
 import helmet from "helmet";
 import cors from "cors";
@@ -21,11 +27,15 @@ import {
 import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
+import emailVerificationRoutes from "./features/email-verification/email-verification.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
 import { buildOpenApiDocument } from "./openapi/registry";
 
 import { resolvers } from "./schema/resolvers";
 import { requireAuthMutations } from "./schema/plugins/requireAuthMutations";
+import { sentryPlugin } from "./schema/plugins/sentryPlugin";
+import { auditMutations } from "./schema/plugins/auditMutations";
+import { auditContextMiddleware } from "./core/middleware/audit-context";
 import { createDoctorLoaders } from "./features/doctors/doctors.loaders";
 import { createPetLoaders } from "./features/pets/pets.loaders";
 import { createOwnerLoaders } from "./features/owners/owners.loaders";
@@ -33,6 +43,14 @@ import { createOwnerLoaders } from "./features/owners/owners.loaders";
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = parseInt(process.env.PORT || "8080", 10);
+
+// Number of reverse-proxy hops to trust for X-Forwarded-* headers.
+// Dev compose (nginx -> backend) = 1. Production (Cloudflare -> nginx ->
+// backend) = 2. Set TRUST_PROXY=2 in the EC2 .env. Critical for both
+// req.ip accuracy and express-rate-limit bucketing — without this, every
+// request appears to come from the reverse proxy and the limiter quickly
+// bans real users while letting attackers through.
+app.set("trust proxy", parseInt(process.env.TRUST_PROXY || "1", 10));
 
 // Build the CORS origin list from env — no origins are hardcoded in source.
 // Set ALLOWED_ORIGINS=https://your-domain.com in production.
@@ -59,10 +77,14 @@ app.use(cookieParser());
 app.use(bodyParser.json(BODY_PARSER_JSON_OPTIONS));
 app.use(bodyParser.urlencoded(BODY_PARSER_URLENCODED_OPTIONS));
 app.use(passport.initialize());
+// Attaches req.auditContext (ip + user-agent) so controllers and the GraphQL
+// audit plugin can record forensic detail without re-parsing headers.
+app.use(auditContextMiddleware);
 
 // REST Routes
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
+app.use("/api/auth", emailVerificationRoutes);
 
 // OpenAPI spec for the REST surface. Served as static JSON so external
 // clients (mobile apps, integrations) can codegen against a typed contract.
@@ -70,6 +92,23 @@ app.use("/api/auth", registrationRoutes);
 // runtime validates against, so it can never drift from the implementation.
 app.get("/api/openapi.json", (_req, res) => {
   res.json(buildOpenApiDocument());
+});
+
+// Liveness + readiness probe. Returns 200 only if the database round-trips
+// within 1s. Used by Docker compose healthcheck and the deploy script to
+// gate rollout. Kept outside /api so it's not accidentally rate-limited.
+app.get("/healthz", async (_req, res) => {
+  try {
+    await Promise.race([
+      pool.query("SELECT 1"),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("db timeout")), 1000)
+      ),
+    ]);
+    res.json({ status: "ok" });
+  } catch {
+    res.status(503).json({ status: "error", message: "db unavailable" });
+  }
 });
 
 const startServer = async () => {
@@ -98,6 +137,8 @@ const startServer = async () => {
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       requireAuthMutations,
+      sentryPlugin,
+      auditMutations,
       ...armorProtection.plugins,
     ],
     validationRules: [...armorProtection.validationRules],
@@ -149,10 +190,16 @@ const startServer = async () => {
             doctorLoaders: createDoctorLoaders(),
             petLoaders: createPetLoaders(),
             ownerLoaders: createOwnerLoaders(),
+            audit: req.auditContext ?? { ip: null, userAgent: null },
           };
         },
       })
     );
+
+    // Sentry's Express error handler must come BEFORE our globalErrorHandler.
+    // It captures exceptions that bubbled out of route handlers and passes the
+    // error along the chain, so globalErrorHandler still formats the response.
+    Sentry.setupExpressErrorHandler(app);
 
     app.use(globalErrorHandler);
 
@@ -161,6 +208,33 @@ const startServer = async () => {
     );
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
     console.log(`🚀 GraphQL ready at http://localhost:${PORT}/graphql`);
+
+    // Graceful shutdown: stop accepting new connections, drain in-flight
+    // requests, stop Apollo, then close the DB pool. Docker sends SIGTERM
+    // on `docker compose down` / rolling restart; without this, requests
+    // mid-flight get RST'd and the pg pool leaks connections.
+    const shutdown = async (signal: string) => {
+      console.log(`Received ${signal}, shutting down gracefully.`);
+      const force = setTimeout(() => {
+        console.error("Forced shutdown after 10s.");
+        process.exit(1);
+      }, 10_000);
+      try {
+        await new Promise<void>((resolve, reject) =>
+          httpServer.close((err) => (err ? reject(err) : resolve()))
+        );
+        await server.stop();
+        await pool.end();
+        clearTimeout(force);
+        process.exit(0);
+      } catch (err) {
+        console.error("Error during shutdown:", err);
+        clearTimeout(force);
+        process.exit(1);
+      }
+    };
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (err) {
     console.error("Failed to start server:", err);
     process.exit(1);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RegistrationService } from "./registration.service";
 import { RegistrationRepository } from "./registration.repository";
+import { EmailVerificationService } from "../email-verification/email-verification.service";
 import { ClientError } from "../../errors/ClientError";
 
 // Mock dependencies
@@ -12,11 +13,18 @@ vi.mock("../../helpers", () => ({
 describe("RegistrationService", () => {
   let registrationService: RegistrationService;
   let registrationRepo: any;
+  let emailVerificationService: { issueAndSendForNewUser: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     registrationRepo = new RegistrationRepository({} as any);
-    registrationService = new RegistrationService(registrationRepo);
+    emailVerificationService = {
+      issueAndSendForNewUser: vi.fn().mockResolvedValue(undefined),
+    };
+    registrationService = new RegistrationService(
+      registrationRepo,
+      emailVerificationService as unknown as EmailVerificationService
+    );
   });
 
   describe("registerOwner", () => {
@@ -34,6 +42,26 @@ describe("RegistrationService", () => {
       expect(result).toEqual({ id: "user_123", email: "john@example.com" });
       expect(registrationRepo.findUserByEmail).toHaveBeenCalledWith(payload.owner.email);
       expect(registrationRepo.createOwnerAndPet).toHaveBeenCalled();
+      // F-16: successful registration must trigger a verification email dispatch.
+      expect(emailVerificationService.issueAndSendForNewUser).toHaveBeenCalledWith(
+        "user_123",
+        "john@example.com"
+      );
+    });
+
+    it("does not roll back account creation if the verification email fails to send", async () => {
+      registrationRepo.findUserByEmail.mockResolvedValue(null);
+      registrationRepo.createOwnerAndPet.mockResolvedValue({ id: "user_123", email: "john@example.com" });
+      emailVerificationService.issueAndSendForNewUser.mockRejectedValue(
+        new Error("smtp down")
+      );
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // The account exists; resend-from-login is the recovery path. The
+      // service must NOT bubble the SMTP failure to the caller.
+      const result = await registrationService.registerOwner(payload);
+      expect(result).toEqual({ id: "user_123", email: "john@example.com" });
+      consoleSpy.mockRestore();
     });
 
     it("should throw a ClientError if email is already registered", async () => {
@@ -64,6 +92,10 @@ describe("RegistrationService", () => {
       expect(result).toEqual({ id: "doctor_123", email: "smith@example.com" });
       expect(registrationRepo.findUserByEmail).toHaveBeenCalledWith(payload.doctor.email);
       expect(registrationRepo.createDoctorWithDetails).toHaveBeenCalled();
+      expect(emailVerificationService.issueAndSendForNewUser).toHaveBeenCalledWith(
+        "doctor_123",
+        "smith@example.com"
+      );
     });
 
     it("should throw a ClientError if email is already registered", async () => {

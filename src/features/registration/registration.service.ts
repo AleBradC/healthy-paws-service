@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { RegistrationRepository } from "./registration.repository";
 import { ROLES } from "../../constants";
 import { hashPassword } from "../../helpers";
@@ -8,12 +9,36 @@ import {
   SystemErrorMessages,
 } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
+import { EmailVerificationService } from "../email-verification/email-verification.service";
 
 export class RegistrationService {
   private registrationRepository: RegistrationRepository;
+  private emailVerificationService: EmailVerificationService;
 
-  constructor(registrationRepository: RegistrationRepository) {
+  constructor(
+    registrationRepository: RegistrationRepository,
+    emailVerificationService: EmailVerificationService
+  ) {
     this.registrationRepository = registrationRepository;
+    this.emailVerificationService = emailVerificationService;
+  }
+
+  // Best-effort verification email dispatch. We deliberately do not roll back
+  // the account on email failure: the user exists, they can request a resend
+  // from the login page. Throwing here would leak account creation state to
+  // the caller and complicate the rate-limited resend flow.
+  private async dispatchVerification(userId: string, email: string): Promise<void> {
+    try {
+      await this.emailVerificationService.issueAndSendForNewUser(userId, email);
+    } catch (err) {
+      console.error("Verification email dispatch failed:", {
+        userId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      Sentry.captureException(err, {
+        tags: { error_class: "VerificationDispatchFailed" },
+      });
+    }
   }
 
   public async registerOwner(
@@ -31,13 +56,16 @@ export class RegistrationService {
 
       const hash = await hashPassword(payload.owner.password!);
 
-      return await this.registrationRepository.createOwnerAndPet({
+      const created = await this.registrationRepository.createOwnerAndPet({
         email: normalizedEmail,
         hash,
         role: ROLES.OWNER_ROLE,
         ownerName: payload.owner.name,
         petData: payload.pet,
       });
+
+      await this.dispatchVerification(created.id, created.email);
+      return created;
     } catch (err) {
       if (err instanceof ClientError || err instanceof SystemError) {
         throw err;
@@ -61,12 +89,15 @@ export class RegistrationService {
 
       const hash = await hashPassword(payload.doctor.password!);
 
-      return await this.registrationRepository.createDoctorWithDetails({
+      const created = await this.registrationRepository.createDoctorWithDetails({
         email: normalizedEmail,
         hash,
         role: ROLES.DOCTOR_ROLE,
         doctorData: payload.doctor,
       });
+
+      await this.dispatchVerification(created.id, created.email);
+      return created;
     } catch (err) {
       if (err instanceof ClientError || err instanceof SystemError) {
         throw err;

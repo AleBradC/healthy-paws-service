@@ -19,6 +19,10 @@ import {
   requestResetSchema,
   resetSchema,
 } from "../features/authentication/authentication.helpers";
+import {
+  verifyEmailSchema,
+  resendVerificationSchema,
+} from "../features/email-verification/email-verification.helpers";
 
 const loginRequestSchema = z
   .object({
@@ -107,6 +111,10 @@ registry.registerPath({
       description: "Invalid credentials",
       content: { "application/json": { schema: apiErrorSchema } },
     },
+    403: {
+      description: "Email not verified — call /api/auth/resend-verification",
+      content: { "application/json": { schema: apiErrorSchema } },
+    },
     429: {
       description: "Rate limit exceeded",
       content: { "application/json": { schema: apiErrorSchema } },
@@ -182,6 +190,56 @@ registry.registerPath({
     },
     400: {
       description: "Token invalid or expired, or password does not meet policy",
+      content: { "application/json": { schema: apiErrorSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/verify-email",
+  tags: ["Authentication"],
+  summary: "Confirm an email address using the token from the verification mail",
+  request: {
+    body: {
+      content: { "application/json": { schema: verifyEmailSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Email verified",
+      content: { "application/json": { schema: successMessageSchema } },
+    },
+    400: {
+      description: "Token invalid, expired, or already used",
+      content: { "application/json": { schema: apiErrorSchema } },
+    },
+    429: {
+      description: "Rate limit exceeded",
+      content: { "application/json": { schema: apiErrorSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/resend-verification",
+  tags: ["Authentication"],
+  summary: "Re-send the verification email for an unverified account",
+  description:
+    "Always returns 200 with the same body regardless of whether the email is registered or already verified, to prevent account-state enumeration.",
+  request: {
+    body: {
+      content: { "application/json": { schema: resendVerificationSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Request accepted",
+      content: { "application/json": { schema: successMessageSchema } },
+    },
+    429: {
+      description: "Rate limit exceeded",
       content: { "application/json": { schema: apiErrorSchema } },
     },
   },
