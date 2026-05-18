@@ -6,6 +6,8 @@ export enum ClientErrorMessages {
   DOCTOR_DETAILS_REQUIRED = "Doctor details are required.",
   INVALID_ROLE = "A valid role ('owner' or 'doctor') must be specified.",
   INVALID_RESET_TOKEN = "Invalid or expired reset link.",
+  INVALID_VERIFICATION_TOKEN = "Invalid or expired verification link.",
+  EMAIL_NOT_VERIFIED = "Please verify your email address before signing in.",
   EMAIL_REQUIRED = "Email is required.",
   NEW_PASSWORD_REQUIRED = "New password is required.",
   REGISTRATION_FAILED = "Registration failed. Please try again later.",
@@ -28,6 +30,9 @@ export enum SuccessMessages {
   PASSWORD_RESET_SUCCESS = "Password reset successfully.",
   OWNER_REGISTERED = "Pet owner registered successfully.",
   DOCTOR_REGISTERED = "Doctor registered successfully.",
+  EMAIL_VERIFIED = "Email verified. You can now sign in.",
+  // Same wording regardless of account state — enumeration-safe.
+  VERIFICATION_LINK_SENT = "If this email is registered and unverified, a new verification link has been sent.",
 }
 
 // --- GraphQL Error Constants ---

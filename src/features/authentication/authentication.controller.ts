@@ -8,6 +8,7 @@ import {
 } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import {requestResetSchema, resetSchema} from "./authentication.helpers";
+import { auditService, AuditAction } from "../audit";
 
 // Shared cookie options for the access-token cookie.
 // httpOnly: cookie is invisible to JS, eliminating the XSS token-theft vector.
@@ -30,18 +31,61 @@ export class AuthenticationController {
   }
 
   public login = (req: Request, res: Response, next: NextFunction): void => {
+    // Captured here so we can log it on the failure path. Passport doesn't
+    // pass the original request body through to the verify callback in a
+    // shape that survives error branches.
+    const attemptedEmail =
+      typeof req.body?.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : null;
+    const ip = req.auditContext?.ip ?? null;
+    const userAgent = req.auditContext?.userAgent ?? null;
+
+    type LoginInfo =
+      | { reason: "invalid" }
+      | { reason: "unverified"; userId: string; email: string }
+      | undefined;
+
     passport.authenticate(
       "local",
       { session: false },
-      async (err: Error | null, user: UserResponse | false) => {
+      async (
+        err: Error | null,
+        user: UserResponse | false,
+        info: LoginInfo
+      ) => {
         if (err) {
           return next(err);
         }
 
         if (!user) {
-          // Single fixed message — never pass through strategy-supplied strings,
-          // to avoid leaking richer states (account locked, internal errors, etc.)
-          // to the client.
+          if (info?.reason === "unverified") {
+            // Correct credentials but the account has not verified its email.
+            // Distinct 403 with a stable error code so the frontend can show
+            // a "resend verification email" CTA. We do NOT count this as a
+            // login.failure for forensic purposes — the credentials matched.
+            auditService.record({
+              action: AuditAction.LoginFailure,
+              outcome: "denied",
+              actorUserId: info.userId,
+              ip,
+              userAgent,
+              metadata: { reason: "email_not_verified", attemptedEmail },
+            });
+            return next(
+              new ClientError(ClientErrorMessages.EMAIL_NOT_VERIFIED, 403)
+            );
+          }
+
+          auditService.record({
+            action: AuditAction.LoginFailure,
+            outcome: "failure",
+            ip,
+            userAgent,
+            // The attempted email is logged so we can correlate brute-force
+            // patterns. We never log the attempted password.
+            metadata: { attemptedEmail },
+          });
           return next(
             new ClientError(ClientErrorMessages.INVALID_CREDENTIALS, 401)
           );
@@ -56,11 +100,18 @@ export class AuthenticationController {
           const { token, expiresAtMs } =
             this.authenticationService.generateAccessToken(payload);
 
-          // Cookie lifetime is derived from the JWT's own exp claim so the
-          // two cannot drift if JWT_EXPIRES_IN is changed.
           res.cookie("accessToken", token, {
             ...ACCESS_COOKIE_BASE_OPTIONS,
             maxAge: Math.max(0, expiresAtMs - Date.now()),
+          });
+
+          auditService.record({
+            action: AuditAction.LoginSuccess,
+            outcome: "success",
+            actorUserId: user.id,
+            actorRole: user.role,
+            ip,
+            userAgent,
           });
 
           const response: ApiResponse<{ role: string; id: string }> = {
@@ -88,6 +139,19 @@ export class AuthenticationController {
       }
 
       await this.authenticationService.startPasswordReset(parsed.data.email);
+
+      // Logged on every request (even for unknown emails) so we can detect
+      // enumeration scans. Storing the attempted email is OK here — the
+      // public response is intentionally enumeration-safe; the AUDIT row is
+      // for internal forensics, not for the requester.
+      auditService.record({
+        action: AuditAction.PasswordResetRequested,
+        outcome: "success",
+        ip: req.auditContext?.ip ?? null,
+        userAgent: req.auditContext?.userAgent ?? null,
+        metadata: { attemptedEmail: parsed.data.email.trim().toLowerCase() },
+      });
+
       // Always 200 with the same generic message — privacy-preserving so the
       // response shape doesn't leak whether the email is registered.
       const response: ApiResponse = {
@@ -111,10 +175,20 @@ export class AuthenticationController {
         throw new ClientError(ClientErrorMessages.NEW_PASSWORD_REQUIRED, 400);
       }
 
-      await this.authenticationService.resetPassword(
+      const userId = await this.authenticationService.resetPassword(
         parsed.data.token,
         parsed.data.newPassword
       );
+
+      auditService.record({
+        action: AuditAction.PasswordResetCompleted,
+        outcome: "success",
+        actorUserId: userId,
+        targetUserId: userId,
+        ip: req.auditContext?.ip ?? null,
+        userAgent: req.auditContext?.userAgent ?? null,
+      });
+
       const response: ApiResponse = {
         status: "success",
         message: SuccessMessages.PASSWORD_RESET_SUCCESS,
@@ -125,7 +199,19 @@ export class AuthenticationController {
     }
   };
 
-  public logout = (_req: Request, res: Response): void => {
+  public logout = (req: Request, res: Response): void => {
+    // Capture identity before clearing the cookie — req.user is unset if the
+    // request had no valid token, but we still log the attempt either way.
+    const user = req.user as UserResponse | undefined;
+    auditService.record({
+      action: AuditAction.Logout,
+      outcome: "success",
+      actorUserId: user?.id ?? null,
+      actorRole: user?.role ?? null,
+      ip: req.auditContext?.ip ?? null,
+      userAgent: req.auditContext?.userAgent ?? null,
+    });
+
     // Must pass the same attributes used when setting the cookie, otherwise
     // some browsers refuse to clear it.
     res.clearCookie("accessToken", ACCESS_COOKIE_BASE_OPTIONS);

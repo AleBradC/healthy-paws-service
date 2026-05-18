@@ -1,6 +1,12 @@
 import "dotenv/config";
 
+// Sentry MUST be imported and initialised before any other module that touches
+// http/https or Express — the SDK monkey-patches those globals at import time.
+import { initSentry } from "./core/observability/sentry";
+initSentry();
+
 import express from "express";
+import * as Sentry from "@sentry/node";
 import http from "http";
 import helmet from "helmet";
 import cors from "cors";
@@ -21,11 +27,15 @@ import {
 import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
+import emailVerificationRoutes from "./features/email-verification/email-verification.routes";
 import { globalErrorHandler } from "./core/middleware/error-middleware";
 import { buildOpenApiDocument } from "./openapi/registry";
 
 import { resolvers } from "./schema/resolvers";
 import { requireAuthMutations } from "./schema/plugins/requireAuthMutations";
+import { sentryPlugin } from "./schema/plugins/sentryPlugin";
+import { auditMutations } from "./schema/plugins/auditMutations";
+import { auditContextMiddleware } from "./core/middleware/audit-context";
 import { createDoctorLoaders } from "./features/doctors/doctors.loaders";
 import { createPetLoaders } from "./features/pets/pets.loaders";
 import { createOwnerLoaders } from "./features/owners/owners.loaders";
@@ -67,10 +77,14 @@ app.use(cookieParser());
 app.use(bodyParser.json(BODY_PARSER_JSON_OPTIONS));
 app.use(bodyParser.urlencoded(BODY_PARSER_URLENCODED_OPTIONS));
 app.use(passport.initialize());
+// Attaches req.auditContext (ip + user-agent) so controllers and the GraphQL
+// audit plugin can record forensic detail without re-parsing headers.
+app.use(auditContextMiddleware);
 
 // REST Routes
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
+app.use("/api/auth", emailVerificationRoutes);
 
 // OpenAPI spec for the REST surface. Served as static JSON so external
 // clients (mobile apps, integrations) can codegen against a typed contract.
@@ -123,6 +137,8 @@ const startServer = async () => {
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       requireAuthMutations,
+      sentryPlugin,
+      auditMutations,
       ...armorProtection.plugins,
     ],
     validationRules: [...armorProtection.validationRules],
@@ -174,10 +190,16 @@ const startServer = async () => {
             doctorLoaders: createDoctorLoaders(),
             petLoaders: createPetLoaders(),
             ownerLoaders: createOwnerLoaders(),
+            audit: req.auditContext ?? { ip: null, userAgent: null },
           };
         },
       })
     );
+
+    // Sentry's Express error handler must come BEFORE our globalErrorHandler.
+    // It captures exceptions that bubbled out of route handlers and passes the
+    // error along the chain, so globalErrorHandler still formats the response.
+    Sentry.setupExpressErrorHandler(app);
 
     app.use(globalErrorHandler);
 

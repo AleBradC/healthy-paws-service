@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import * as Sentry from "@sentry/node";
 import { ClientError } from "../../errors/ClientError";
 import { ClientErrorMessages } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
@@ -39,6 +40,13 @@ export const globalErrorHandler = (
       stack: err.stack,
       originalError: err.originalError,
     });
+    // Capture the wrapped originalError when present so Sentry groups by the
+    // real cause (e.g. a Postgres error code) instead of by the SystemError
+    // wrapper, which has the same stack frame for every DB failure.
+    Sentry.captureException(err.originalError ?? err, {
+      tags: { error_class: "SystemError" },
+      extra: { message: err.message },
+    });
 
     const response: ApiResponse = {
       status: "error",
@@ -48,6 +56,7 @@ export const globalErrorHandler = (
   }
 
   console.error("UNHANDLED EXCEPTION:", err);
+  Sentry.captureException(err, { tags: { error_class: "Unhandled" } });
   const response: ApiResponse = {
     status: "error",
     message: ClientErrorMessages.INTERNAL_SERVER_ERROR,

@@ -8,6 +8,7 @@ export interface UserRecord {
   email: string;
   password_hash: string;
   role: ROLES;
+  email_verified: boolean;
 }
 
 // Projection of Users row without credentials.
