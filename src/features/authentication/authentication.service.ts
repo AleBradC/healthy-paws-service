@@ -1,8 +1,6 @@
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
-import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthenticationRepository } from "./authentication.repository";
 import { SafeUserRecord, UserRecord, UserResponse, JwtPayload } from "../../types";
 import { hashPassword } from "../../helpers";
@@ -17,9 +15,10 @@ import {
 } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
-import { APP_NAME, PASSWORD_RESET_EXPIRES_MINUTES } from "../../core/config/email";
+import { PASSWORD_RESET_EXPIRES_MINUTES } from "../../core/config/email";
 import { JWT_CONFIG } from "../../core/config/jwt";
 import { APP_CONFIG } from "../../core/config/app";
+import { sendMail } from "../../core/mailer";
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
@@ -144,25 +143,14 @@ export class AuthenticationService {
     toEmail: string,
     resetUrl: string
   ): Promise<void> {
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: Number(process.env.MAIL_PORT),
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    } as SMTPTransport.Options);
-
     const templateParams = {
       resetUrl,
       expiresInMinutes: PASSWORD_RESET_EXPIRES_MINUTES,
     };
 
     try {
-      await transporter.sendMail({
-        from: `"${APP_NAME}" <${process.env.MAIL_FROM}>`,
-        to: [toEmail],
+      await sendMail({
+        to: toEmail,
         subject: getResetEmailSubject(),
         text: getResetEmailText(templateParams),
         html: getResetEmailHtml(templateParams),
