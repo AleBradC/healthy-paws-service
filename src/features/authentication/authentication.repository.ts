@@ -13,7 +13,7 @@ export class AuthenticationRepository {
     // to Users in future migrations doesn't silently start leaking them
     // through this method.
     const result: QueryResult<UserRecord> = await this.db.query(
-      `SELECT id, email, password_hash, role, email_verified
+      `SELECT id, email, password_hash, role
          FROM Users WHERE email = $1`,
       [email]
     );

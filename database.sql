@@ -6,9 +6,7 @@ CREATE TABLE Users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor')),
-    image_url TEXT,
-    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    email_verified_at TIMESTAMP WITH TIME ZONE NULL
+    image_url TEXT
 );
 
 -- Users.id as primary key (1:1 relationship).
@@ -152,15 +150,3 @@ CREATE TABLE AuditEvents (
 
 CREATE INDEX idx_audit_actor_time ON AuditEvents (actor_user_id, occurred_at DESC);
 CREATE INDEX idx_audit_action_time ON AuditEvents (action, occurred_at DESC);
-
--- EmailVerificationTokens table
-CREATE TABLE EmailVerificationTokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(64) NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    used_at TIMESTAMP WITH TIME ZONE NULL
-);
-
-CREATE INDEX idx_email_verification_token_hash ON EmailVerificationTokens (token_hash);
-CREATE INDEX idx_email_verification_user_id ON EmailVerificationTokens (user_id);

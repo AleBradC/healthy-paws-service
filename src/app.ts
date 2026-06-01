@@ -27,7 +27,7 @@ import {
 import { passport } from "./core/middleware/passport-config";
 import authenticationRoutes from "./features/authentication/authentication.routes";
 import registrationRoutes from "./features/registration/registration.routes";
-import emailVerificationRoutes from "./features/email-verification/email-verification.routes";
+
 import { globalErrorHandler } from "./core/middleware/error-middleware";
 import { buildOpenApiDocument } from "./openapi/registry";
 
@@ -84,7 +84,7 @@ app.use(auditContextMiddleware);
 // REST Routes
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
-app.use("/api/auth", emailVerificationRoutes);
+
 
 // OpenAPI spec for the REST surface. Served as static JSON so external
 // clients (mobile apps, integrations) can codegen against a typed contract.

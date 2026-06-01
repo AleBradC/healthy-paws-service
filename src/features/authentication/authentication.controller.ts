@@ -43,7 +43,6 @@ export class AuthenticationController {
 
     type LoginInfo =
       | { reason: "invalid" }
-      | { reason: "unverified"; userId: string; email: string }
       | undefined;
 
     passport.authenticate(
@@ -59,23 +58,6 @@ export class AuthenticationController {
         }
 
         if (!user) {
-          if (info?.reason === "unverified") {
-            // Correct credentials but the account has not verified its email.
-            // Distinct 403 with a stable error code so the frontend can show
-            // a "resend verification email" CTA. We do NOT count this as a
-            // login.failure for forensic purposes — the credentials matched.
-            auditService.record({
-              action: AuditAction.LoginFailure,
-              outcome: "denied",
-              actorUserId: info.userId,
-              ip,
-              userAgent,
-              metadata: { reason: "email_not_verified", attemptedEmail },
-            });
-            return next(
-              new ClientError(ClientErrorMessages.EMAIL_NOT_VERIFIED, 403)
-            );
-          }
 
           auditService.record({
             action: AuditAction.LoginFailure,

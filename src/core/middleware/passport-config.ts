@@ -17,13 +17,8 @@ const authenticationService = new AuthenticationService(
   authenticationRepository
 );
 
-// Structured info we forward through passport-local's `info` channel. The
-// passport-local IVerifyOptions type only declares `message?: string`, but
-// Passport at runtime hands the `info` object through untouched. We cast
-// once at the done() call site and re-narrow in the controller.
 export type LocalInfo =
-  | { reason: "invalid" }
-  | { reason: "unverified"; userId: string; email: string };
+  | { reason: "invalid" };
 
 passport.use(
   new LocalStrategy(
@@ -35,16 +30,7 @@ passport.use(
         switch (result.status) {
           case "ok":
             return done(null, result.user);
-          case "email-not-verified":
-            return done(
-              null,
-              false,
-              {
-                reason: "unverified",
-                userId: result.userId,
-                email: result.email,
-              } as unknown as { message: string }
-            );
+
           case "invalid-credentials":
           default:
             return done(

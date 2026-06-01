@@ -34,8 +34,7 @@ const DUMMY_HASH = bcrypt.hashSync("__dummy__", 12);
 // and unverified accounts.
 export type ValidateUserResult =
   | { status: "ok"; user: UserResponse }
-  | { status: "invalid-credentials" }
-  | { status: "email-not-verified"; userId: string; email: string };
+  | { status: "invalid-credentials" };
 
 export class AuthenticationService {
   private authenticationRepository: AuthenticationRepository;
@@ -77,12 +76,6 @@ export class AuthenticationService {
         return { status: "invalid-credentials" };
       }
 
-      if (!user.email_verified) {
-        // Reached only after a correct password — revealing "unverified" here
-        // does not help an attacker beyond what they already know (they typed
-        // the right password).
-        return { status: "email-not-verified", userId: user.id, email: user.email };
-      }
 
       return {
         status: "ok",
