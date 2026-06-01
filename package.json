@@ -10,12 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint .",
-    "migrate": "node-pg-migrate",
-    "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down",
-    "migrate:redo": "node-pg-migrate redo",
-    "migrate:create": "node-pg-migrate create --migration-filename-format utc"
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -72,7 +67,6 @@
     "graphql": "^16.13.2",
     "helmet": "8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "node-pg-migrate": "8.0.4",
     "nodemailer": "^8.0.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

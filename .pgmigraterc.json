@@ -1,8 +1,0 @@
-{
-  "dir": "migrations",
-  "migrations-table": "pgmigrations",
-  "migrations-schema": "public",
-  "schema": "public",
-  "check-order": true,
-  "verbose": true
-}

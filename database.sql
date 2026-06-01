@@ -6,7 +6,9 @@ CREATE TABLE Users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role VARCHAR(50) NOT NULL CHECK(role IN ('owner', 'doctor')),
-    image_url TEXT
+    image_url TEXT,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verified_at TIMESTAMP WITH TIME ZONE NULL
 );
 
 -- Users.id as primary key (1:1 relationship).
@@ -131,3 +133,34 @@ CREATE TABLE PasswordResetTokens (
 );
 
 CREATE INDEX idx_token_hash ON PasswordResetTokens(token_hash);
+
+-- AuditEvents table
+CREATE TABLE AuditEvents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    actor_user_id UUID NULL REFERENCES Users(id) ON DELETE SET NULL,
+    actor_role VARCHAR(50) NULL,
+    ip VARCHAR(64) NULL,
+    user_agent TEXT NULL,
+    action VARCHAR(64) NOT NULL,
+    target_type VARCHAR(64) NULL,
+    target_user_id UUID NULL REFERENCES Users(id) ON DELETE SET NULL,
+    target_id VARCHAR(128) NULL,
+    outcome VARCHAR(32) NOT NULL CHECK (outcome IN ('success','failure','denied')),
+    metadata JSONB NULL
+);
+
+CREATE INDEX idx_audit_actor_time ON AuditEvents (actor_user_id, occurred_at DESC);
+CREATE INDEX idx_audit_action_time ON AuditEvents (action, occurred_at DESC);
+
+-- EmailVerificationTokens table
+CREATE TABLE EmailVerificationTokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE NULL
+);
+
+CREATE INDEX idx_email_verification_token_hash ON EmailVerificationTokens (token_hash);
+CREATE INDEX idx_email_verification_user_id ON EmailVerificationTokens (user_id);

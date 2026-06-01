@@ -61,10 +61,13 @@ DB_DATABASE=healthypaws
 DB_PASSWORD=your_password
 DB_PORT=5432
 JWT_SECRET=your_secret_key
-# Resend SMTP key (https://resend.com). Leave empty for local dev — the
-# mailer falls back to printing emails to stdout in that case.
-RESEND_API_KEY=
-MAIL_FROM=onboarding@resend.dev
+# SMTP configuration (e.g. Brevo). Leave empty for local dev — the
+# mailer falls back to generating Ethereal Email preview links in that case.
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USER=your-email@example.com
+MAIL_PASSWORD=your-smtp-password
+MAIL_FROM=noreply@healthypaws.com
 ```
 
 ### Running the Service

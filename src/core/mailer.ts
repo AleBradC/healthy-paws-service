@@ -1,48 +1,34 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { APP_NAME } from "./config/email";
 
-// Single shared mail transport. Auto-selects between two modes at runtime:
-//
-//   1. RESEND_API_KEY set  -> real Resend SMTP transport.
-//      The free sandbox sender `onboarding@resend.dev` works on day 1 with
-//      no DNS work. Verify your own domain in the Resend dashboard later
-//      (publish their four DNS records) and set MAIL_FROM=you@yourdomain.com
-//      to send from your own address.
-//
-//   2. RESEND_API_KEY unset -> streamTransport "log to stdout" fallback.
-//      The full rendered MIME is printed to the backend logs so a developer
-//      can click the verification / reset link without signing up for any
-//      external provider. NEVER use this mode in production.
-//
-// The transport is constructed lazily on first send so that importing this
-// module is a side-effect-free operation (important for tests).
-
 let cachedTransport: Transporter | null = null;
 
-function buildTransport(): Transporter {
-  const apiKey = process.env.RESEND_API_KEY;
+async function buildTransport(): Promise<Transporter> {
+  const host = process.env.MAIL_HOST;
+  const port = parseInt(process.env.MAIL_PORT || "587", 10);
+  const user = process.env.MAIL_USER;
+  const pass = process.env.MAIL_PASSWORD;
 
-  if (apiKey) {
+  if (host && user && pass) {
     return nodemailer.createTransport({
-      host: "smtp.resend.com",
-      port: 465,
-      secure: true,
-      auth: { user: "resend", pass: apiKey },
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
     });
   }
 
-  console.warn(
-    "[mailer] RESEND_API_KEY not set — using stdout fallback. " +
-      "Emails will appear in this process's logs instead of being delivered. " +
-      "Set RESEND_API_KEY in .env to enable real delivery."
-  );
+  console.warn("[mailer] MAIL_HOST not set — using Ethereal Email fallback.");
+  const testAccount = await nodemailer.createTestAccount();
 
-  // streamTransport returns the rendered RFC-822 message as `info.message`.
-  // jsonTransport would lose the embedded URLs we need to copy from logs.
   return nodemailer.createTransport({
-    streamTransport: true,
-    newline: "unix",
-    buffer: true,
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
   });
 }
 
@@ -59,9 +45,9 @@ export interface SendMailParams {
 }
 
 export async function sendMail(params: SendMailParams): Promise<void> {
-  if (!cachedTransport) cachedTransport = buildTransport();
+  if (!cachedTransport) cachedTransport = await buildTransport();
 
-  const mailFromAddress = process.env.MAIL_FROM ?? "onboarding@resend.dev";
+  const mailFromAddress = process.env.MAIL_FROM ?? "noreply@healthypaws.com";
   const from = `"${APP_NAME}" <${mailFromAddress}>`;
 
   const info = await cachedTransport.sendMail({
@@ -72,16 +58,9 @@ export async function sendMail(params: SendMailParams): Promise<void> {
     html: params.html,
   });
 
-  // Dev mode (streamTransport): dump the rendered message so the developer
-  // can grab the verification URL from the log. In production (real SMTP)
-  // `info.message` is undefined and this block is a no-op.
-  const message = (info as { message?: Buffer | string }).message;
-  if (message) {
-    const raw =
-      message instanceof Buffer ? message.toString("utf8") : String(message);
-    console.log(
-      `[mailer:dev] to=${params.to} subject=${JSON.stringify(params.subject)}`
-    );
-    console.log(raw);
+  // Dev mode (Ethereal): print the generated URL so the developer can click it.
+  if (!process.env.MAIL_HOST) {
+    console.log(`💌 Email sent for testing to: ${params.to}`);
+    console.log(`👀 Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
   }
 }
