@@ -1,12 +1,12 @@
 import DataLoader from "dataloader";
 import pool from "../../core/config/db";
 import {
-  ActiveTreatment,
+  Pet,
+  Owner,
   Appointment,
   LifelongCondition,
-  Owner,
-  Pet,
-} from "../../types";
+  ActiveTreatment,
+} from "../../core/utils/types";
 
 async function batchPets(ids: readonly string[]): Promise<(Pet | null)[]> {
   const query = `SELECT * FROM Pets WHERE id = ANY($1);`;
@@ -17,7 +17,7 @@ async function batchPets(ids: readonly string[]): Promise<(Pet | null)[]> {
 }
 
 async function batchOwnersByPetIds(
-  petIds: readonly string[]
+  petIds: readonly string[],
 ): Promise<(Owner | null)[]> {
   if (petIds.length === 0) return [];
 
@@ -28,7 +28,7 @@ async function batchOwnersByPetIds(
     JOIN Pets p ON o.id = p.owner_id
     WHERE p.id = ANY($1);
     `,
-    [petIds]
+    [petIds],
   );
 
   // Map pet_id to corresponding owner
@@ -45,14 +45,14 @@ async function batchOwnersByPetIds(
 }
 
 async function batchAppointmentsByPetIds(
-  petIds: readonly string[]
+  petIds: readonly string[],
 ): Promise<Appointment[][]> {
   const result = await pool.query(
     `SELECT id, appointment_datetime, status, doctor_id, pet_id
      FROM Appointments
      WHERE pet_id = ANY($1)
      ORDER BY appointment_datetime DESC`,
-    [petIds]
+    [petIds],
   );
 
   const map = new Map<string, Appointment[]>();
@@ -69,11 +69,11 @@ async function batchAppointmentsByPetIds(
 }
 
 async function batchLifelongConditionsByPetIds(
-  petIds: readonly string[]
+  petIds: readonly string[],
 ): Promise<LifelongCondition[][]> {
   const result = await pool.query(
     `SELECT id, condition, treatment, pet_id FROM Health_Records_Lifelong WHERE pet_id = ANY($1);`,
-    [petIds]
+    [petIds],
   );
 
   const map = new Map<string, LifelongCondition[]>();
@@ -91,11 +91,11 @@ async function batchLifelongConditionsByPetIds(
 }
 
 async function batchActiveTreatmentsByPetIds(
-  petIds: readonly string[]
+  petIds: readonly string[],
 ): Promise<ActiveTreatment[][]> {
   const result = await pool.query(
     `SELECT id, condition, treatment, start_date, end_date, pet_id FROM Health_Records_Active WHERE pet_id = ANY($1);`,
-    [petIds]
+    [petIds],
   );
 
   const map = new Map<string, ActiveTreatment[]>();

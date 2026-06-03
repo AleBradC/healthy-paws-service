@@ -1,11 +1,11 @@
 import { petsService } from "./pets.service";
 import { GraphQLContext } from "../../schema/loaders";
-import { Pet } from "../../types";
 import {
   GetByIdArgs,
   CreatePetArgs,
   UpdatePetArgs,
 } from "../../schema/resolvers.types";
+import { Pet } from "../../core/utils/types";
 
 export const petsResolvers = {
   Query: {
@@ -16,10 +16,18 @@ export const petsResolvers = {
   },
 
   Mutation: {
-    createPet: async (_: any, { input }: CreatePetArgs, context: GraphQLContext) => {
+    createPet: async (
+      _: any,
+      { input }: CreatePetArgs,
+      context: GraphQLContext,
+    ) => {
       return petsService.createPet(input, context.user!.id);
     },
-    updatePet: async (_: any, { input }: UpdatePetArgs, context: GraphQLContext) => {
+    updatePet: async (
+      _: any,
+      { input }: UpdatePetArgs,
+      context: GraphQLContext,
+    ) => {
       return petsService.updatePet(input, context.user!.id);
     },
   },

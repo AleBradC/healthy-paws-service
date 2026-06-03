@@ -1,9 +1,12 @@
 import pool from "../../core/config/db";
 import { UpdateOwnerProfileInput } from "../../schema/resolvers.types";
-import { Owner, Pet } from "../../types";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
-import { OwnerErrorMessages, SystemErrorMessages } from "../../errors/constants";
+import {
+  OwnerErrorMessages,
+  SystemErrorMessages,
+} from "../../errors/constants";
+import { Pet, Owner } from "../../core/utils/types";
 
 // ownerId IS users.id (shared primary key, see database.sql).
 export async function getOwnerEmail(ownerId: string): Promise<string | null> {
@@ -30,7 +33,7 @@ export async function getPetsByOwner(ownerId: string): Promise<Pet[]> {
 }
 
 export async function updateOwnerProfile(
-  input: UpdateOwnerProfileInput
+  input: UpdateOwnerProfileInput,
 ): Promise<Owner | null> {
   const { name, ownerId } = input;
 

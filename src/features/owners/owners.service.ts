@@ -8,7 +8,10 @@ export const ownersService = {
     return id; // Return ID to be loaded via Dataloader by the resolver
   },
 
-  updateOwnerProfile: async (input: UpdateOwnerProfileInput, userId: string) => {
+  updateOwnerProfile: async (
+    input: UpdateOwnerProfileInput,
+    userId: string,
+  ) => {
     await verifyOwnerOwnership(userId, input.ownerId);
     return updateOwnerProfile(input);
   },

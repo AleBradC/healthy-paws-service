@@ -1,9 +1,9 @@
 import DataLoader from "dataloader";
 import pool from "../../core/config/db";
-import { Doctor, Specialization, Service } from "../../types";
+import { Doctor, Specialization, Service } from "../../core/utils/types";
 
 async function batchDoctors(
-  ids: readonly string[]
+  ids: readonly string[],
 ): Promise<(Doctor | null)[]> {
   const result = await pool.query(`SELECT * FROM Doctors WHERE id = ANY($1)`, [
     ids,
@@ -14,13 +14,13 @@ async function batchDoctors(
 
 // Batch load specializations by doctor IDs
 async function batchSpecializationsByDoctor(
-  doctorIds: readonly string[]
+  doctorIds: readonly string[],
 ): Promise<Specialization[][]> {
   const result = await pool.query(
     `SELECT s.*, ds.doctor_id FROM Specializations s
      JOIN Doctor_Specializations ds ON s.id = ds.specialization_id
      WHERE ds.doctor_id = ANY($1)`,
-    [doctorIds]
+    [doctorIds],
   );
   const map = new Map<string, Specialization[]>();
   doctorIds.forEach((id) => map.set(id, [])); // initialize empty array for each doctor
@@ -32,13 +32,13 @@ async function batchSpecializationsByDoctor(
 
 // Batch load services by (doctor_id, specialization_id) keys
 async function batchServicesByDoctorAndSpecialization(
-  keys: readonly { doctorId: string; specializationId: string }[]
+  keys: readonly { doctorId: string; specializationId: string }[],
 ): Promise<Service[][]> {
   if (keys.length === 0) return [];
 
   // Filter out keys with undefined doctorId or specializationId to avoid invalid queries
   const validKeys = keys.filter(
-    (k) => k.doctorId !== undefined && k.specializationId !== undefined
+    (k) => k.doctorId !== undefined && k.specializationId !== undefined,
   );
 
   if (validKeys.length === 0) {
@@ -55,7 +55,7 @@ async function batchServicesByDoctorAndSpecialization(
      FROM Doctor_Service_Pricing dsp
      JOIN Services s ON dsp.service_id = s.id
      WHERE dsp.doctor_id = ANY($1)`,
-    [doctorIds]
+    [doctorIds],
   );
 
   // Group result services by doctorId and specializationId
@@ -83,7 +83,7 @@ export function createDoctorLoaders() {
     doctorById: new DataLoader(batchDoctors),
     specializationsByDoctor: new DataLoader(batchSpecializationsByDoctor),
     servicesByDoctorAndSpecialization: new DataLoader(
-      batchServicesByDoctorAndSpecialization
+      batchServicesByDoctorAndSpecialization,
     ),
   };
 }

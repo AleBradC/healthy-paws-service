@@ -1,11 +1,11 @@
 import { ownersService } from "./owners.service";
 import { getOwnerEmail, getPetsByOwner } from "./owners.repository";
 import { GraphQLContext } from "../../schema/loaders";
-import { Owner } from "../../types";
 import {
   GetByIdArgs,
   UpdateOwnerProfileArgs,
 } from "../../schema/resolvers.types";
+import { Owner } from "../../core/utils/types";
 
 export const ownersResolvers = {
   Query: {
@@ -16,7 +16,11 @@ export const ownersResolvers = {
   },
 
   Mutation: {
-    updateOwnerProfile: async (_: any, { input }: UpdateOwnerProfileArgs, context: GraphQLContext) => {
+    updateOwnerProfile: async (
+      _: any,
+      { input }: UpdateOwnerProfileArgs,
+      context: GraphQLContext,
+    ) => {
       return ownersService.updateOwnerProfile(input, context.user!.id);
     },
   },

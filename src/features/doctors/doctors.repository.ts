@@ -7,6 +7,13 @@ import {
   UpdateDoctorProfileInput,
   UpdateDoctorSpecializationInput,
 } from "../../schema/resolvers.types";
+
+import { ClientError } from "../../errors/ClientError";
+import { SystemError } from "../../errors/SystemError";
+import {
+  DoctorErrorMessages,
+  SystemErrorMessages,
+} from "../../errors/constants";
 import {
   Doctor,
   Specialization,
@@ -14,16 +21,13 @@ import {
   Availability,
   Appointment,
   Pet,
-} from "../../types";
-import { ClientError } from "../../errors/ClientError";
-import { SystemError } from "../../errors/SystemError";
-import { DoctorErrorMessages, SystemErrorMessages } from "../../errors/constants";
+} from "../../core/utils/types";
 
 export async function getAllDoctors(
   limit?: number,
   skip?: number,
   name?: string,
-  specializationId?: string
+  specializationId?: string,
 ): Promise<Doctor[]> {
   let query = `
     SELECT *
@@ -62,7 +66,7 @@ export async function getAllDoctors(
 
 export async function getDoctorsTotalCount(
   name?: string,
-  specializationId?: string
+  specializationId?: string,
 ): Promise<number> {
   let query = `
     SELECT COUNT(*)
@@ -127,7 +131,7 @@ export async function getEmailDoctor(doctorId: string): Promise<string | null> {
 
 export async function getServicesByDoctorAndSpecialization(
   doctorId: string,
-  specializationId: string
+  specializationId: string,
 ): Promise<Service[]> {
   const query = `
     SELECT s.id, dsp.specialization_id, s.name, dsp.price
@@ -147,7 +151,7 @@ export async function getServicesByDoctorAndSpecialization(
 }
 
 export async function getAvailabilitiesByDoctor(
-  doctorId: string
+  doctorId: string,
 ): Promise<Availability[]> {
   const query = `
     SELECT id, available_datetime 
@@ -167,7 +171,7 @@ export async function getAvailabilitiesByDoctor(
 }
 
 export async function getAppointmentsByDoctor(
-  doctorId: string
+  doctorId: string,
 ): Promise<Appointment[]> {
   const query = `SELECT * FROM Appointments WHERE doctor_id = $1 ORDER BY appointment_datetime DESC;`;
   try {
@@ -201,7 +205,7 @@ export async function getPatientsByDoctor(doctorId: string): Promise<Pet[]> {
 }
 
 export async function updateDoctorProfile(
-  input: UpdateDoctorProfileInput
+  input: UpdateDoctorProfileInput,
 ): Promise<Doctor | null> {
   const { doctorId, name, clinicName, clinicAddress } = input;
   const client = await pool.connect();
@@ -211,7 +215,7 @@ export async function updateDoctorProfile(
 
     const doctorResult = await client.query(
       "SELECT id FROM Doctors WHERE id = $1",
-      [doctorId]
+      [doctorId],
     );
     if (doctorResult.rows.length === 0) {
       throw new ClientError(DoctorErrorMessages.DOCTOR_NOT_FOUND, 404);
@@ -232,7 +236,7 @@ export async function updateDoctorProfile(
     if (clinicAddress !== undefined) {
       await client.query(
         "UPDATE Doctors SET clinic_address = $1 WHERE id = $2",
-        [clinicAddress, doctorId]
+        [clinicAddress, doctorId],
       );
     }
 
@@ -252,7 +256,7 @@ export async function updateDoctorProfile(
 }
 
 export async function addDoctorSpecialization(
-  input: AddDoctorSpecializationInput
+  input: AddDoctorSpecializationInput,
 ): Promise<Doctor | null> {
   const { doctorId, specializationName, services } = input;
   const client = await pool.connect();
@@ -264,7 +268,7 @@ export async function addDoctorSpecialization(
       `INSERT INTO Specializations (name) VALUES ($1)
        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
        RETURNING id`,
-      [specializationName]
+      [specializationName],
     );
     const specializationId = specResult.rows[0].id;
 
@@ -272,7 +276,7 @@ export async function addDoctorSpecialization(
       `INSERT INTO Doctor_Specializations (doctor_id, specialization_id)
        VALUES ($1, $2)
        ON CONFLICT (doctor_id, specialization_id) DO NOTHING`,
-      [doctorId, specializationId]
+      [doctorId, specializationId],
     );
 
     if (services.length > 0) {
@@ -281,14 +285,14 @@ export async function addDoctorSpecialization(
           `INSERT INTO Services (name) VALUES ($1)
            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
            RETURNING id`,
-          [service.name]
+          [service.name],
         );
         const serviceId = serviceResult.rows[0].id;
 
         await client.query(
           `INSERT INTO Specialization_Services (specialization_id, service_id)
            VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [specializationId, serviceId]
+          [specializationId, serviceId],
         );
 
         await client.query(
@@ -296,7 +300,7 @@ export async function addDoctorSpecialization(
            VALUES ($1, $2, $3, $4)
            ON CONFLICT (doctor_id, specialization_id, service_id)
            DO UPDATE SET price = EXCLUDED.price;`,
-          [doctorId, specializationId, serviceId, service.price]
+          [doctorId, specializationId, serviceId, service.price],
         );
       }
     }
@@ -317,20 +321,20 @@ export async function addDoctorSpecialization(
 }
 
 export async function removeDoctorSpecialization(
-  input: RemoveDoctorSpecializationInput
+  input: RemoveDoctorSpecializationInput,
 ): Promise<Doctor | null> {
   const { doctorId, specializationId } = input;
 
   try {
     const result = await pool.query(
       `DELETE FROM Doctor_Specializations WHERE doctor_id = $1 AND specialization_id = $2 RETURNING doctor_id`,
-      [doctorId, specializationId]
+      [doctorId, specializationId],
     );
 
     if (result.rows.length === 0) {
       throw new ClientError(
         DoctorErrorMessages.DOCTOR_SPECIALIZATION_DELETE_FAIL,
-        404
+        404,
       );
     }
 
@@ -344,7 +348,7 @@ export async function removeDoctorSpecialization(
 }
 
 export async function updateDoctorSpecialization(
-  input: UpdateDoctorSpecializationInput
+  input: UpdateDoctorSpecializationInput,
 ): Promise<Doctor | null> {
   const { doctorId, specializationId, services } = input;
   const client = await pool.connect();
@@ -357,28 +361,28 @@ export async function updateDoctorSpecialization(
       `INSERT INTO Doctor_Specializations (doctor_id, specialization_id)
        VALUES ($1, $2)
        ON CONFLICT (doctor_id, specialization_id) DO NOTHING`,
-      [doctorId, specializationId]
+      [doctorId, specializationId],
     );
 
     // Fetch current service_ids for this doctor-specialization pair
     const currentDbServicesResult = await client.query(
       `SELECT service_id FROM Doctor_Service_Pricing WHERE doctor_id = $1 AND specialization_id = $2`,
-      [doctorId, specializationId]
+      [doctorId, specializationId],
     );
     const currentDbServiceIds = new Set(
-      currentDbServicesResult.rows.map((r: any) => r.service_id)
+      currentDbServicesResult.rows.map((r: any) => r.service_id),
     );
     const incomingServiceIds = new Set(
-      services.map((s: any) => s.id).filter(Boolean)
+      services.map((s: any) => s.id).filter(Boolean),
     );
 
     const serviceIdsToDelete = [...currentDbServiceIds].filter(
-      (id) => !incomingServiceIds.has(id)
+      (id) => !incomingServiceIds.has(id),
     );
     if (serviceIdsToDelete.length > 0) {
       await client.query(
         `DELETE FROM Doctor_Service_Pricing WHERE doctor_id = $1 AND specialization_id = $2 AND service_id = ANY($3::uuid[])`,
-        [doctorId, specializationId, serviceIdsToDelete]
+        [doctorId, specializationId, serviceIdsToDelete],
       );
     }
 
@@ -388,13 +392,13 @@ export async function updateDoctorSpecialization(
       if (!serviceId || serviceId.startsWith("custom-")) {
         const newServiceResult = await client.query(
           `INSERT INTO Services (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
-          [service.name]
+          [service.name],
         );
         serviceId = newServiceResult.rows[0].id;
 
         await client.query(
           `INSERT INTO Specialization_Services (specialization_id, service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [specializationId, serviceId]
+          [specializationId, serviceId],
         );
       }
 
@@ -402,7 +406,7 @@ export async function updateDoctorSpecialization(
         `INSERT INTO Doctor_Service_Pricing (doctor_id, specialization_id, service_id, price)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (doctor_id, specialization_id, service_id) DO UPDATE SET price = EXCLUDED.price;`,
-        [doctorId, specializationId, serviceId, service.price]
+        [doctorId, specializationId, serviceId, service.price],
       );
     }
 
@@ -422,7 +426,7 @@ export async function updateDoctorSpecialization(
 }
 
 export async function addDoctorAvailability(
-  input: AddDoctorAvailabilityInput
+  input: AddDoctorAvailabilityInput,
 ): Promise<Doctor | null> {
   const { doctorId, availabilities } = input;
   const client = await pool.connect();
@@ -432,7 +436,7 @@ export async function addDoctorAvailability(
 
     const existingDoctor = await client.query(
       `SELECT id FROM Doctors WHERE id = $1`,
-      [doctorId]
+      [doctorId],
     );
     if (existingDoctor.rows.length === 0) {
       throw new ClientError(DoctorErrorMessages.DOCTOR_NOT_FOUND, 404);
@@ -444,7 +448,7 @@ export async function addDoctorAvailability(
         `INSERT INTO Availabilities (doctor_id, available_datetime)
          VALUES ($1, $2)
          ON CONFLICT (doctor_id, available_datetime) DO NOTHING`,
-        [doctorId, normalizedDatetime]
+        [doctorId, normalizedDatetime],
       );
     }
 
@@ -464,20 +468,20 @@ export async function addDoctorAvailability(
 }
 
 export async function removeDoctorAvailability(
-  input: RemoveDoctorAvailabilityInput
+  input: RemoveDoctorAvailabilityInput,
 ): Promise<Doctor | null> {
   const { doctorId, availabilityId } = input;
 
   try {
     const result = await pool.query(
       `DELETE FROM Availabilities WHERE doctor_id = $1 AND id = $2 RETURNING doctor_id`,
-      [doctorId, availabilityId]
+      [doctorId, availabilityId],
     );
 
     if (result.rows.length === 0) {
       throw new ClientError(
         DoctorErrorMessages.DOCTOR_AVAILABILITY_DELETE_FAIL,
-        404
+        404,
       );
     }
 

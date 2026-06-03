@@ -2,8 +2,7 @@ import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
 import { AuthenticationRepository } from "./authentication.repository";
-import { SafeUserRecord, UserRecord, UserResponse, JwtPayload } from "../../types";
-import { hashPassword } from "../../helpers";
+
 import {
   getResetEmailHtml,
   getResetEmailSubject,
@@ -19,6 +18,8 @@ import { PASSWORD_RESET_EXPIRES_MINUTES } from "../../core/config/email";
 import { JWT_CONFIG } from "../../core/config/jwt";
 import { APP_CONFIG } from "../../core/config/app";
 import { sendMail } from "../../core/mailer";
+import { hashPassword } from "../../core/utils/helpers";
+import { UserResponse, SafeUserRecord } from "../../core/utils/types";
 
 // Computed once at module load. Used in validateUser to ensure the "unknown email"
 // path always runs a full bcrypt comparison, preventing timing-based enumeration.
@@ -43,7 +44,7 @@ export class AuthenticationService {
     this.authenticationRepository = authRepository;
   }
 
-  public generateAccessToken(payload: JwtPayload): {
+  public generateAccessToken(payload: jwt.JwtPayload): {
     token: string;
     expiresAtMs: number;
   } {
@@ -61,11 +62,12 @@ export class AuthenticationService {
 
   public async validateUser(
     email: string,
-    password: string
+    password: string,
   ): Promise<ValidateUserResult> {
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
+      const user =
+        await this.authenticationRepository.findUserByEmail(normalizedEmail);
 
       // Always run bcrypt.compare so unknown-email and wrong-password paths
       // take the same wall-clock time, preventing timing-based enumeration.
@@ -75,7 +77,6 @@ export class AuthenticationService {
       if (!user || !isMatch) {
         return { status: "invalid-credentials" };
       }
-
 
       return {
         status: "ok",
@@ -97,7 +98,8 @@ export class AuthenticationService {
   public async startPasswordReset(email: string): Promise<void> {
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const user = await this.authenticationRepository.findUserByEmail(normalizedEmail);
+      const user =
+        await this.authenticationRepository.findUserByEmail(normalizedEmail);
       if (!user) {
         // Silently succeed — never reveal whether an email is registered.
         return;
@@ -112,14 +114,14 @@ export class AuthenticationService {
         .update(rawToken)
         .digest("hex");
       const expiresAt = new Date(
-        Date.now() + PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000
+        Date.now() + PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000,
       );
 
       await this.authenticationRepository.invalidatePreviousTokens(user.id);
       await this.authenticationRepository.createResetToken(
         user.id,
         tokenHash,
-        expiresAt
+        expiresAt,
       );
 
       const resetUrl = `${APP_CONFIG.frontendUrl}/auth/reset-password?token=${rawToken}`;
@@ -134,7 +136,7 @@ export class AuthenticationService {
 
   private async sendResetLinkEmail(
     toEmail: string,
-    resetUrl: string
+    resetUrl: string,
   ): Promise<void> {
     const templateParams = {
       resetUrl,
@@ -157,10 +159,11 @@ export class AuthenticationService {
   // tied to the right account without re-querying.
   public async resetPassword(
     token: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<string> {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const row = await this.authenticationRepository.findValidResetToken(tokenHash);
+    const row =
+      await this.authenticationRepository.findValidResetToken(tokenHash);
 
     if (!row) {
       throw new ClientError(ClientErrorMessages.INVALID_RESET_TOKEN, 400);
@@ -171,7 +174,7 @@ export class AuthenticationService {
     try {
       await this.authenticationRepository.updateUserPassword(
         row.user_id,
-        hashedPassword
+        hashedPassword,
       );
       await this.authenticationRepository.markResetTokenUsed(row.id);
       return row.user_id;

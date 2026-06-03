@@ -1,14 +1,12 @@
 import { NextFunction, Request, Response, CookieOptions } from "express";
 import passport from "passport";
 import { AuthenticationService } from "./authentication.service";
-import { JwtPayload, UserResponse, ApiResponse } from "../../types";
-import {
-  ClientErrorMessages,
-  SuccessMessages,
-} from "../../errors/constants";
+
+import { ClientErrorMessages, SuccessMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
-import {requestResetSchema, resetSchema} from "./authentication.helpers";
+import { requestResetSchema, resetSchema } from "./authentication.helpers";
 import { auditService, AuditAction } from "../audit";
+import { ApiResponse, JwtPayload, UserResponse } from "../../core/utils/types";
 
 // Shared cookie options for the access-token cookie.
 // httpOnly: cookie is invisible to JS, eliminating the XSS token-theft vector.
@@ -41,9 +39,7 @@ export class AuthenticationController {
     const ip = req.auditContext?.ip ?? null;
     const userAgent = req.auditContext?.userAgent ?? null;
 
-    type LoginInfo =
-      | { reason: "invalid" }
-      | undefined;
+    type LoginInfo = { reason: "invalid" } | undefined;
 
     passport.authenticate(
       "local",
@@ -51,14 +47,13 @@ export class AuthenticationController {
       async (
         err: Error | null,
         user: UserResponse | false,
-        info: LoginInfo
+        info: LoginInfo,
       ) => {
         if (err) {
           return next(err);
         }
 
         if (!user) {
-
           auditService.record({
             action: AuditAction.LoginFailure,
             outcome: "failure",
@@ -69,7 +64,7 @@ export class AuthenticationController {
             metadata: { attemptedEmail },
           });
           return next(
-            new ClientError(ClientErrorMessages.INVALID_CREDENTIALS, 401)
+            new ClientError(ClientErrorMessages.INVALID_CREDENTIALS, 401),
           );
         }
 
@@ -105,14 +100,14 @@ export class AuthenticationController {
         } catch (error) {
           return next(error);
         }
-      }
+      },
     )(req, res, next);
   };
 
   public startPasswordReset = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const parsed = requestResetSchema.safeParse(req.body);
@@ -149,7 +144,7 @@ export class AuthenticationController {
   public resetPassword = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const parsed = resetSchema.safeParse(req.body);
@@ -159,7 +154,7 @@ export class AuthenticationController {
 
       const userId = await this.authenticationService.resetPassword(
         parsed.data.token,
-        parsed.data.newPassword
+        parsed.data.newPassword,
       );
 
       auditService.record({

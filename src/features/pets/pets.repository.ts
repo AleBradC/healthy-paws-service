@@ -1,19 +1,19 @@
 import { GraphQLError } from "graphql";
 import pool from "../../core/config/db";
 import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
-import { Pet } from "../../types";
 import { ClientError } from "../../errors/ClientError";
 import { SystemError } from "../../errors/SystemError";
-import {
-  PetErrorMessages,
-  SystemErrorMessages,
-} from "../../errors/constants";
+import { PetErrorMessages, SystemErrorMessages } from "../../errors/constants";
+import { Pet } from "../../core/utils/types";
 
 /**
  * Verifies that a pet record belongs to the specified owner.
  * The roleId from the token is the ownerId.
  */
-export async function verifyPetOwnership(roleId: string, petId: string): Promise<void> {
+export async function verifyPetOwnership(
+  roleId: string,
+  petId: string,
+): Promise<void> {
   const query = `
     SELECT 1 
     FROM Pets 
@@ -22,9 +22,12 @@ export async function verifyPetOwnership(roleId: string, petId: string): Promise
   const result = await pool.query(query, [petId, roleId]);
 
   if (result.rowCount === 0) {
-    throw new GraphQLError("You do not have permission to modify this pet record.", {
-      extensions: { code: "FORBIDDEN" },
-    });
+    throw new GraphQLError(
+      "You do not have permission to modify this pet record.",
+      {
+        extensions: { code: "FORBIDDEN" },
+      },
+    );
   }
 }
 
@@ -84,7 +87,7 @@ export async function updatePet(input: UpdatePetInput): Promise<Pet | null> {
   const { petId, ...fieldsToUpdate } = input;
 
   const fieldEntries = Object.entries(fieldsToUpdate).filter(
-    ([, value]) => value !== undefined
+    ([, value]) => value !== undefined,
   );
 
   if (fieldEntries.length === 0) {
@@ -92,7 +95,7 @@ export async function updatePet(input: UpdatePetInput): Promise<Pet | null> {
   }
 
   const setClauses = fieldEntries.map(
-    ([key], index) => `${key} = $${index + 1}`
+    ([key], index) => `${key} = $${index + 1}`,
   );
   const values = fieldEntries.map(([, value]) => value);
 

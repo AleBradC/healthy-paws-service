@@ -1,5 +1,10 @@
 import { Pool, QueryResult } from "pg";
-import { SafeUserRecord, UserRecord, CreateOwnerArgs, CreateDoctorArgs } from "../../types";
+import {
+  UserRecord,
+  SafeUserRecord,
+  CreateOwnerArgs,
+  CreateDoctorArgs,
+} from "../../core/utils/types";
 
 export class RegistrationRepository {
   private db: Pool;
@@ -11,7 +16,7 @@ export class RegistrationRepository {
   public async findUserByEmail(email: string): Promise<UserRecord | null> {
     const result: QueryResult<UserRecord> = await this.db.query(
       "SELECT * FROM Users WHERE email = $1",
-      [email]
+      [email],
     );
     return result.rows[0] || null;
   }
@@ -19,13 +24,13 @@ export class RegistrationRepository {
   public async findUserById(id: string): Promise<SafeUserRecord | null> {
     const result: QueryResult<SafeUserRecord> = await this.db.query(
       "SELECT id, email, role FROM Users WHERE id = $1",
-      [id]
+      [id],
     );
     return result.rows[0] || null;
   }
 
   public async createOwnerAndPet(
-    args: CreateOwnerArgs
+    args: CreateOwnerArgs,
   ): Promise<{ id: string; email: string }> {
     const { email, hash, role, ownerName, petData } = args;
     const client = await this.db.connect();
@@ -35,15 +40,15 @@ export class RegistrationRepository {
 
       const userResult = await client.query(
         "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
-        [email, hash, role]
+        [email, hash, role],
       );
       const newUser = userResult.rows[0];
 
       // Owners.id IS Users.id (shared primary key, see database.sql).
-      await client.query(
-        "INSERT INTO Owners (id, name) VALUES ($1, $2)",
-        [newUser.id, ownerName]
-      );
+      await client.query("INSERT INTO Owners (id, name) VALUES ($1, $2)", [
+        newUser.id,
+        ownerName,
+      ]);
 
       await client.query(
         "INSERT INTO Pets (owner_id, name, type, breed, age, weight) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -54,7 +59,7 @@ export class RegistrationRepository {
           petData.breed,
           petData.age,
           petData.weight,
-        ]
+        ],
       );
 
       await client.query("COMMIT");
@@ -69,7 +74,7 @@ export class RegistrationRepository {
   }
 
   public async createDoctorWithDetails(
-    args: CreateDoctorArgs
+    args: CreateDoctorArgs,
   ): Promise<{ id: string; email: string }> {
     const { email, hash, role, doctorData } = args;
     const { name, clinicName, clinicAddress, specializations } = doctorData;
@@ -80,14 +85,14 @@ export class RegistrationRepository {
 
       const userResult = await client.query(
         "INSERT INTO Users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email",
-        [email, hash, role]
+        [email, hash, role],
       );
       const newUser = userResult.rows[0];
 
       // Doctors.id IS Users.id (shared primary key, see database.sql).
       await client.query(
         "INSERT INTO Doctors (id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4)",
-        [newUser.id, name, clinicName, clinicAddress]
+        [newUser.id, name, clinicName, clinicAddress],
       );
       const newDoctorId = newUser.id;
 
@@ -96,13 +101,13 @@ export class RegistrationRepository {
           `INSERT INTO Specializations (name) VALUES ($1)
            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
            RETURNING id`,
-          [specPayload.name]
+          [specPayload.name],
         );
         const specializationId = specResult.rows[0].id;
 
         await client.query(
           "INSERT INTO Doctor_Specializations (doctor_id, specialization_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-          [newDoctorId, specializationId]
+          [newDoctorId, specializationId],
         );
 
         for (const servicePayload of specPayload.services) {
@@ -110,20 +115,20 @@ export class RegistrationRepository {
             `INSERT INTO Services (name) VALUES ($1)
              ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
              RETURNING id`,
-            [servicePayload.name]
+            [servicePayload.name],
           );
           const serviceId = serviceResult.rows[0].id;
 
           await client.query(
             "INSERT INTO Specialization_Services (specialization_id, service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-            [specializationId, serviceId]
+            [specializationId, serviceId],
           );
 
           await client.query(
             `INSERT INTO Doctor_Service_Pricing (doctor_id, specialization_id, service_id, price)
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (doctor_id, specialization_id, service_id) DO NOTHING`,
-            [newDoctorId, specializationId, serviceId, servicePayload.price]
+            [newDoctorId, specializationId, serviceId, servicePayload.price],
           );
         }
       }

@@ -1,15 +1,16 @@
 import { Pool } from "pg";
 import DataLoader from "dataloader";
 import {
+  Doctor,
   Specialization,
   Service,
-  Doctor,
   Pet,
   Owner,
-  ActiveTreatment,
   Appointment,
   LifelongCondition,
-} from "../types";
+  ActiveTreatment,
+} from "../core/utils/types";
+import { JwtPayload } from "jsonwebtoken";
 
 export interface DoctorLoaders {
   doctorById: DataLoader<string, Doctor | null>;
@@ -34,7 +35,7 @@ export interface OwnerLoaders {
 
 export interface GraphQLContext {
   db: Pool;
-  user?: import("../types").JwtPayload | null;
+  user?: JwtPayload | null;
   doctorLoaders: DoctorLoaders;
   petLoaders: PetLoaders;
   ownerLoaders: OwnerLoaders;

@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import { RegisterDoctorPayload, RegisterOwnerPayload, ApiResponse } from "../../types";
 import { RegistrationService } from "./registration.service";
 import { ClientErrorMessages, SuccessMessages } from "../../errors/constants";
 import { ClientError } from "../../errors/ClientError";
-import { ownerSchema, petSchema, doctorSchema } from "./registration.validation";
+import {
+  ownerSchema,
+  petSchema,
+  doctorSchema,
+} from "./registration.validation";
+import {
+  RegisterOwnerPayload,
+  ApiResponse,
+  RegisterDoctorPayload,
+} from "../../core/utils/types";
 
 export class RegistrationController {
   private registrationService: RegistrationService;
@@ -15,7 +23,7 @@ export class RegistrationController {
   public registerOwner = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> => {
     const { owner, pet } = req.body;
 
@@ -23,7 +31,7 @@ export class RegistrationController {
       if (!owner || !pet) {
         throw new ClientError(
           ClientErrorMessages.OWNER_AND_ANIMAL_REQUIRED,
-          400
+          400,
         );
       }
 
@@ -60,16 +68,13 @@ export class RegistrationController {
   public registerDoctor = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> => {
     const { doctor } = req.body;
 
     try {
       if (!doctor) {
-        throw new ClientError(
-          ClientErrorMessages.DOCTOR_DETAILS_REQUIRED,
-          400
-        );
+        throw new ClientError(ClientErrorMessages.DOCTOR_DETAILS_REQUIRED, 400);
       }
 
       const doctorResult = doctorSchema.safeParse(doctor);

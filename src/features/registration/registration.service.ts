@@ -1,32 +1,30 @@
-import * as Sentry from "@sentry/node";
 import { RegistrationRepository } from "./registration.repository";
-import { ROLES } from "../../constants";
-import { hashPassword } from "../../helpers";
-import { RegisterDoctorPayload, RegisterOwnerPayload } from "../../types";
 import { ClientError } from "../../errors/ClientError";
 import {
   ClientErrorMessages,
   SystemErrorMessages,
 } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
+import { ROLES } from "../../core/utils/constants";
+import { hashPassword } from "../../core/utils/helpers";
+import {
+  RegisterOwnerPayload,
+  RegisterDoctorPayload,
+} from "../../core/utils/types";
 export class RegistrationService {
   private registrationRepository: RegistrationRepository;
 
-  constructor(
-    registrationRepository: RegistrationRepository
-  ) {
+  constructor(registrationRepository: RegistrationRepository) {
     this.registrationRepository = registrationRepository;
   }
 
-
   public async registerOwner(
-    payload: RegisterOwnerPayload
+    payload: RegisterOwnerPayload,
   ): Promise<{ id: string; email: string }> {
     try {
       const normalizedEmail = payload.owner.email.trim().toLowerCase();
-      const existingUser = await this.registrationRepository.findUserByEmail(
-        normalizedEmail
-      );
+      const existingUser =
+        await this.registrationRepository.findUserByEmail(normalizedEmail);
 
       if (existingUser) {
         throw new ClientError(ClientErrorMessages.ACCOUNT_EXISTS, 409);
@@ -52,13 +50,12 @@ export class RegistrationService {
   }
 
   public async registerDoctor(
-    payload: RegisterDoctorPayload
+    payload: RegisterDoctorPayload,
   ): Promise<{ id: string; email: string }> {
     try {
       const normalizedEmail = payload.doctor.email.trim().toLowerCase();
-      const existingUser = await this.registrationRepository.findUserByEmail(
-        normalizedEmail
-      );
+      const existingUser =
+        await this.registrationRepository.findUserByEmail(normalizedEmail);
 
       if (existingUser) {
         throw new ClientError(ClientErrorMessages.ACCOUNT_EXISTS, 409);
@@ -66,12 +63,14 @@ export class RegistrationService {
 
       const hash = await hashPassword(payload.doctor.password!);
 
-      const created = await this.registrationRepository.createDoctorWithDetails({
-        email: normalizedEmail,
-        hash,
-        role: ROLES.DOCTOR_ROLE,
-        doctorData: payload.doctor,
-      });
+      const created = await this.registrationRepository.createDoctorWithDetails(
+        {
+          email: normalizedEmail,
+          hash,
+          role: ROLES.DOCTOR_ROLE,
+          doctorData: payload.doctor,
+        },
+      );
 
       return created;
     } catch (err) {

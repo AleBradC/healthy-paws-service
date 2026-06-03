@@ -20,7 +20,12 @@ import {
 } from "../../schema/resolvers.types";
 
 export const doctorsService = {
-  getDoctors: async (limit: number, skip: number, name?: string, specializationId?: string) => {
+  getDoctors: async (
+    limit: number,
+    skip: number,
+    name?: string,
+    specializationId?: string,
+  ) => {
     const items = await getAllDoctors(limit, skip, name, specializationId);
     const totalCount = await getDoctorsTotalCount(name, specializationId);
     return { items, totalCount };
@@ -30,32 +35,50 @@ export const doctorsService = {
     return getAllSpecializations();
   },
 
-  updateDoctorProfile: async (input: UpdateDoctorProfileInput, userId: string) => {
+  updateDoctorProfile: async (
+    input: UpdateDoctorProfileInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return updateDoctorProfile(input);
   },
 
-  addDoctorSpecialization: async (input: AddDoctorSpecializationInput, userId: string) => {
+  addDoctorSpecialization: async (
+    input: AddDoctorSpecializationInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return addDoctorSpecialization(input);
   },
 
-  removeDoctorSpecialization: async (input: RemoveDoctorSpecializationInput, userId: string) => {
+  removeDoctorSpecialization: async (
+    input: RemoveDoctorSpecializationInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return removeDoctorSpecialization(input);
   },
 
-  updateDoctorSpecialization: async (input: UpdateDoctorSpecializationInput, userId: string) => {
+  updateDoctorSpecialization: async (
+    input: UpdateDoctorSpecializationInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return updateDoctorSpecialization(input);
   },
 
-  addDoctorAvailability: async (input: AddDoctorAvailabilityInput, userId: string) => {
+  addDoctorAvailability: async (
+    input: AddDoctorAvailabilityInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return addDoctorAvailability(input);
   },
 
-  removeDoctorAvailability: async (input: RemoveDoctorAvailabilityInput, userId: string) => {
+  removeDoctorAvailability: async (
+    input: RemoveDoctorAvailabilityInput,
+    userId: string,
+  ) => {
     await verifyDoctorOwnership(userId, input.doctorId);
     return removeDoctorAvailability(input);
   },
