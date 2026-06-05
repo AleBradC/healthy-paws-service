@@ -31,6 +31,48 @@ export async function verifyPetOwnership(
   }
 }
 
+/**
+ * Verifies that a user has permission to access a pet record.
+ * Owners can access their own pets.
+ * Doctors can access pets if they have or had appointments with them.
+ */
+export async function verifyPetAccess(
+  roleId: string,
+  role: string,
+  petId: string,
+): Promise<void> {
+  let query: string;
+  let params: any[];
+
+  if (role === "doctor") {
+    query = `
+      SELECT 1 
+      FROM Appointments 
+      WHERE pet_id = $1 AND doctor_id = $2;
+    `;
+    params = [petId, roleId];
+  } else {
+    query = `
+      SELECT 1 
+      FROM Pets 
+      WHERE id = $1 AND owner_id = $2;
+    `;
+    params = [petId, roleId];
+  }
+
+  const result = await pool.query(query, params);
+
+  if (result.rowCount === 0) {
+    throw new GraphQLError(
+      "You do not have permission to access this pet record.",
+      {
+        extensions: { code: "FORBIDDEN" },
+      },
+    );
+  }
+}
+
+
 export async function getPetById(petId: string): Promise<Pet | null> {
   const query = `SELECT * FROM Pets WHERE id = $1;`;
 

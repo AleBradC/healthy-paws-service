@@ -10,7 +10,7 @@ import { Pet } from "../../core/utils/types";
 export const petsResolvers = {
   Query: {
     pet: async (_: any, { id }: GetByIdArgs, context: GraphQLContext) => {
-      const petId = await petsService.getPet(id, context.user!.id);
+      const petId = await petsService.getPet(id, context.user!.id, context.user!.role);
       return context.petLoaders.petById.load(petId);
     },
   },

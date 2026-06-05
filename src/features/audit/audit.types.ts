@@ -13,8 +13,6 @@ export enum AuditAction {
   Logout = "logout",
   PasswordResetRequested = "password.reset.requested",
   PasswordResetCompleted = "password.reset.completed",
-  EmailVerificationRequested = "email.verify.requested",
-  EmailVerificationCompleted = "email.verify.completed",
   AuthzDeny = "authz.deny",
   MutationSuccess = "mutation.success",
   MutationFailure = "mutation.failure",

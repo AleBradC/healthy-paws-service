@@ -14,7 +14,6 @@ const expectedErrorCodes = new Set([
   "UNAUTHENTICATED",
   "FORBIDDEN",
   "BAD_USER_INPUT",
-  "EMAIL_NOT_VERIFIED",
 ]);
 
 export const auditMutations: ApolloServerPlugin<GraphQLContext> = {

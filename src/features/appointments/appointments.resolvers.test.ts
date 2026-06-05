@@ -8,7 +8,7 @@ vi.mock("./appointments.service", () => ({
     getAppointment: vi.fn().mockResolvedValue({ id: "appt-1", pet_id: "pet-1" }),
     createAppointment: vi.fn().mockResolvedValue({ id: "new-appt", pet_id: "pet-1" }),
     updateAppointment: vi.fn().mockResolvedValue({ id: "appt-1", status: "Confirmed" }),
-    removeAppointment: vi.fn().mockResolvedValue({ id: "appt-1", status: "Cancel" }),
+    removeAppointment: vi.fn().mockResolvedValue({ id: "appt-1", status: "Cancelled" }),
     getAppointmentStatus: vi.fn().mockReturnValue("Upcoming"),
   }
 }));
@@ -65,7 +65,7 @@ describe("appointmentsResolvers", () => {
       const result = await appointmentsResolvers.Mutation.removeAppointment(null, { input }, mockContext as GraphQLContext);
 
       expect(appointmentsService.removeAppointment).toHaveBeenCalledWith(input, "user-1", "owner");
-      expect(result).toEqual({ id: "appt-1", status: "Cancel" });
+      expect(result).toEqual({ id: "appt-1", status: "Cancelled" });
     });
   });
 });

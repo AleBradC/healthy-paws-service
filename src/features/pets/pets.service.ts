@@ -1,10 +1,10 @@
-import { createPet, updatePet, verifyPetOwnership } from "./pets.repository";
+import { createPet, updatePet, verifyPetOwnership, verifyPetAccess } from "./pets.repository";
 import { verifyOwnerOwnership } from "../../core/utils/authorization.utils";
 import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
 
 export const petsService = {
-  getPet: async (id: string, userId: string) => {
-    await verifyPetOwnership(userId, id);
+  getPet: async (id: string, userId: string, userRole: string) => {
+    await verifyPetAccess(userId, userRole, id);
     return id; // Returns the ID so the resolver can load it via dataloader
   },
 

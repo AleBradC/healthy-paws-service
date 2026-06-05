@@ -38,7 +38,7 @@ describe("petsResolvers", () => {
 
       const result = await petsResolvers.Query.pet(null, { id: petId }, mockContext as GraphQLContext);
 
-      expect(petsService.getPet).toHaveBeenCalledWith(petId, "user-1");
+      expect(petsService.getPet).toHaveBeenCalledWith(petId, "user-1", "owner");
       expect(vi.mocked(mockContext.petLoaders.petById.load)).toHaveBeenCalledWith(petId);
       expect(result).toEqual(mockPet);
     });
