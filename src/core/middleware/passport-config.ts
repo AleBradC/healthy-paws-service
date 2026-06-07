@@ -10,22 +10,24 @@ import pool from "../config/db";
 import { JWT_CONFIG } from "../config/jwt";
 import { AuthenticationService } from "../../features/authentication/authentication.service";
 import { AuthenticationRepository } from "../../features/authentication/authentication.repository";
-import { JwtPayload } from "../../types";
+import { JwtPayload } from "../utils/types";
 
 const authenticationRepository = new AuthenticationRepository(pool);
 const authenticationService = new AuthenticationService(
-  authenticationRepository
+  authenticationRepository,
 );
 
-export type LocalInfo =
-  | { reason: "invalid" };
+export type LocalInfo = { reason: "invalid" };
 
 passport.use(
   new LocalStrategy(
     { usernameField: "email" },
     async (email, password, done) => {
       try {
-        const result = await authenticationService.validateUser(email, password);
+        const result = await authenticationService.validateUser(
+          email,
+          password,
+        );
 
         switch (result.status) {
           case "ok":
@@ -33,17 +35,15 @@ passport.use(
 
           case "invalid-credentials":
           default:
-            return done(
-              null,
-              false,
-              { reason: "invalid" } as unknown as { message: string }
-            );
+            return done(null, false, { reason: "invalid" } as unknown as {
+              message: string;
+            });
         }
       } catch (err) {
         return done(err);
       }
-    }
-  )
+    },
+  ),
 );
 
 // Extract the JWT from the httpOnly cookie instead of the Authorization header.
@@ -80,8 +80,8 @@ passport.use(
       } catch (err) {
         return done(err, false);
       }
-    }
-  )
+    },
+  ),
 );
 
 export { passport };

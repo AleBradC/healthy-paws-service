@@ -8,7 +8,7 @@ import {
   RemoveAppointmentInput,
   UpdateAppointmentInput,
 } from "../../schema/resolvers.types";
-import { Appointment } from "../../types";
+
 import { addDoctorAvailability } from "../doctors/doctors.repository";
 import { formatAppointmentRow } from "./appointments.helpers";
 import { ClientError } from "../../errors/ClientError";
@@ -19,6 +19,7 @@ import {
   AppointmentErrorMessages,
   PetErrorMessages,
 } from "../../errors/constants";
+import { Appointment } from "../../core/utils/types";
 
 /**
  * Verifies that an appointment belongs to the user (either the doctor or the owner of the pet).
@@ -26,7 +27,7 @@ import {
 export async function verifyAppointmentOwnership(
   roleId: string,
   role: string,
-  appointmentId: string
+  appointmentId: string,
 ): Promise<void> {
   let query: string;
   if (role === "doctor") {
@@ -47,14 +48,17 @@ export async function verifyAppointmentOwnership(
   const result = await pool.query(query, [appointmentId, roleId]);
 
   if (result.rowCount === 0) {
-    throw new GraphQLError("You do not have permission to access or modify this appointment.", {
-      extensions: { code: "FORBIDDEN" },
-    });
+    throw new GraphQLError(
+      "You do not have permission to access or modify this appointment.",
+      {
+        extensions: { code: "FORBIDDEN" },
+      },
+    );
   }
 }
 
 export async function getAppointmentById(
-  id: string
+  id: string,
 ): Promise<Appointment | null> {
   const query = `SELECT * FROM Appointments WHERE id = $1;`;
   try {
@@ -66,7 +70,7 @@ export async function getAppointmentById(
 }
 
 export async function createAppointment(
-  input: CreateAppointmentInput
+  input: CreateAppointmentInput,
 ): Promise<Appointment | null> {
   const { petId, doctorId, consultationType } = input;
   const appointmentDatetime = new Date(input.appointmentDatetime).toISOString();
@@ -83,7 +87,7 @@ export async function createAppointment(
       `DELETE FROM Availabilities 
        WHERE doctor_id = $1 AND available_datetime = $2
        RETURNING id`,
-      [doctorId, appointmentDatetime]
+      [doctorId, appointmentDatetime],
     );
 
     if (availResult.rows.length === 0) {
@@ -92,19 +96,19 @@ export async function createAppointment(
         `SELECT id FROM Appointments 
          WHERE doctor_id = $1 AND appointment_datetime = $2 
          AND status NOT IN ('Cancelled', 'Denied')`,
-        [doctorId, appointmentDatetime]
+        [doctorId, appointmentDatetime],
       );
 
       if (appointmentCheck.rows.length > 0) {
         throw new ClientError(
           AppointmentErrorMessages.APPOINTMENT_SLOT_TAKEN,
-          409
+          409,
         );
       }
 
       throw new ClientError(
         "This appointment slot is no longer available. Please select a different time.",
-        400
+        400,
       );
     }
 
@@ -130,7 +134,7 @@ export async function createAppointment(
     if (error.code === PostgresErrorCode.UNIQUE_VIOLATION) {
       throw new ClientError(
         AppointmentErrorMessages.APPOINTMENT_SLOT_TAKEN,
-        409
+        409,
       );
     }
     throw new SystemError(SystemErrorMessages.DB_QUERY_FAILED, error);
@@ -140,7 +144,7 @@ export async function createAppointment(
 }
 
 export async function removeAppointment(
-  input: RemoveAppointmentInput
+  input: RemoveAppointmentInput,
 ): Promise<Appointment | null> {
   const { appointmentId } = input;
   const client = await pool.connect();
@@ -150,31 +154,31 @@ export async function removeAppointment(
 
     const appointmentResult = await client.query(
       `SELECT * FROM Appointments WHERE id = $1`,
-      [appointmentId]
+      [appointmentId],
     );
 
     if (appointmentResult.rows.length === 0) {
       throw new ClientError(
         AppointmentErrorMessages.APPOINTMENT_NOT_FOUND,
-        404
+        404,
       );
     }
     const appointmentData = appointmentResult.rows[0];
 
     // Restore availability if it's not already terminal
-    const isCurrentlyActive = !["Cancelled", "Denied"].includes(appointmentData.status);
+    const isCurrentlyActive = !["Cancelled", "Denied"].includes(
+      appointmentData.status,
+    );
 
     await client.query(
       `UPDATE Appointments SET status = 'Cancelled' WHERE id = $1`,
-      [appointmentId]
+      [appointmentId],
     );
 
     if (isCurrentlyActive) {
       await addDoctorAvailability({
         doctorId: appointmentData.doctor_id,
-        availabilities: [
-          appointmentData.appointment_datetime.toISOString(),
-        ],
+        availabilities: [appointmentData.appointment_datetime.toISOString()],
       });
     }
 
@@ -192,18 +196,17 @@ export async function removeAppointment(
   }
 }
 
-
 async function syncHealthRecords(
   client: PoolClient,
   petId: string,
   tableName: "Health_Records_Lifelong" | "Health_Records_Active",
   incomingRecords: Array<LifelongConditionInput | ActiveTreatmentInput> = [],
-  isLifelong: boolean = true
+  isLifelong: boolean = true,
 ): Promise<void> {
   try {
     const { rows: existingDbRecords } = await client.query<{ id: string }>(
       `SELECT id, condition FROM ${tableName} WHERE pet_id = $1`,
-      [petId]
+      [petId],
     );
 
     const existingDbIds = new Set(existingDbRecords.map((r: any) => r.id));
@@ -252,9 +255,9 @@ async function syncHealthRecords(
             throw new ClientError(
               PetErrorMessages.CONDITION_ALREADY_EXISTS.replace(
                 "{condition}",
-                record.condition
+                record.condition,
               ),
-              400
+              400,
             );
           }
           throw e;
@@ -266,7 +269,7 @@ async function syncHealthRecords(
     if (idsToDelete.length > 0) {
       await client.query(
         `DELETE FROM ${tableName} WHERE id = ANY($1::uuid[])`,
-        [idsToDelete]
+        [idsToDelete],
       );
     }
   } catch (error) {
@@ -278,7 +281,7 @@ async function syncHealthRecords(
 }
 
 export async function updateAppointment(
-  input: UpdateAppointmentInput
+  input: UpdateAppointmentInput,
 ): Promise<Appointment | null> {
   const {
     appointmentId,
@@ -299,15 +302,20 @@ export async function updateAppointment(
 
     const appointmentRes = await client.query(
       `SELECT pet_id, doctor_id, appointment_datetime, status FROM Appointments WHERE id = $1`,
-      [appointmentId]
+      [appointmentId],
     );
     if (appointmentRes.rows.length === 0) {
       throw new ClientError(
         AppointmentErrorMessages.APPOINTMENT_NOT_FOUND,
-        404
+        404,
       );
     }
-    const { pet_id, doctor_id, appointment_datetime, status: oldStatus } = appointmentRes.rows[0];
+    const {
+      pet_id,
+      doctor_id,
+      appointment_datetime,
+      status: oldStatus,
+    } = appointmentRes.rows[0];
 
     if (
       status ||
@@ -331,7 +339,7 @@ export async function updateAppointment(
           consultationType,
           investigation,
           investigationResult,
-        ]
+        ],
       );
 
       // If status changed to Cancelled or Denied, restore availability
@@ -362,7 +370,7 @@ export async function updateAppointment(
           patientDetails.breed,
           patientDetails.age,
           patientDetails.weight,
-        ]
+        ],
       );
     }
 
@@ -371,14 +379,14 @@ export async function updateAppointment(
       pet_id,
       "Health_Records_Lifelong",
       lifelongConditions ?? [],
-      true
+      true,
     );
     await syncHealthRecords(
       client,
       pet_id,
       "Health_Records_Active",
       activeTreatments ?? [],
-      false
+      false,
     );
 
     await client.query("COMMIT");

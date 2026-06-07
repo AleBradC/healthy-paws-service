@@ -1,4 +1,4 @@
-import { Appointment } from "../../types";
+import { Appointment } from "../../core/utils/types";
 
 export function formatAppointmentRow(row: any): Appointment {
   return {
