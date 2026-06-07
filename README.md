@@ -85,6 +85,23 @@ MAIL_FROM=noreply@healthypaws.com
   npm start
   ```
 
+### Accessing Apollo Server (GraphQL Sandbox)
+
+Once the server is running, the GraphQL API is available at:
+
+```
+http://localhost:8080/graphql
+```
+
+Open this URL in a browser to launch the **Apollo Sandbox** — an interactive playground where you can:
+
+- Write and execute GraphQL **queries** and **mutations**
+- Browse the full schema with auto-complete
+- Set HTTP headers (e.g., `Authorization: Bearer <token>`) for authenticated requests
+- View response data and errors in real time
+
+> **Note:** If you're running the service via Docker Compose from the [Wrapper Repository](https://github.com/AleBradC/healthy-paws-wrapper), the GraphQL endpoint may be accessible through the Nginx gateway instead (check the wrapper's configuration for the exposed port).
+
 ---
 
 ## ⚙️ CI/CD
