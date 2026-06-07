@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/node";
 import { ClientError } from "../../errors/ClientError";
 import { ClientErrorMessages } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
-import { ApiResponse } from "../../types";
+import { ApiResponse } from "../utils/types";
 
 // body-parser tags its PayloadTooLargeError with `type: "entity.too.large"`,
 // which is more specific than just checking `statusCode === 413`.
@@ -16,7 +16,7 @@ export const globalErrorHandler = (
   err: Error,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ) => {
   if (err instanceof ClientError) {
     const response: ApiResponse = {

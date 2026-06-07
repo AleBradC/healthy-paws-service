@@ -6,8 +6,12 @@ import {
   verifyAppointmentOwnership,
 } from "./appointments.repository";
 import { verifyPetOwnership } from "../pets/pets.repository";
-import { Appointment } from "../../types";
-import { CreateAppointmentInput, UpdateAppointmentInput, RemoveAppointmentInput } from "../../schema/resolvers.types";
+import {
+  CreateAppointmentInput,
+  UpdateAppointmentInput,
+  RemoveAppointmentInput,
+} from "../../schema/resolvers.types";
+import { Appointment } from "../../core/utils/types";
 
 export const appointmentsService = {
   getAppointment: async (id: string, userId: string, userRole: string) => {
@@ -20,12 +24,20 @@ export const appointmentsService = {
     return createAppointment(input);
   },
 
-  updateAppointment: async (input: UpdateAppointmentInput, userId: string, userRole: string) => {
+  updateAppointment: async (
+    input: UpdateAppointmentInput,
+    userId: string,
+    userRole: string,
+  ) => {
     await verifyAppointmentOwnership(userId, userRole, input.appointmentId);
     return updateAppointment(input);
   },
 
-  removeAppointment: async (input: RemoveAppointmentInput, userId: string, userRole: string) => {
+  removeAppointment: async (
+    input: RemoveAppointmentInput,
+    userId: string,
+    userRole: string,
+  ) => {
     await verifyAppointmentOwnership(userId, userRole, input.appointmentId);
     return removeAppointment(input);
   },
