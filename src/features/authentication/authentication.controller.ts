@@ -8,12 +8,6 @@ import { requestResetSchema, resetSchema } from "./authentication.helpers";
 import { auditService, AuditAction } from "../audit";
 import { ApiResponse, JwtPayload, UserResponse } from "../../core/utils/types";
 
-// Shared cookie options for the access-token cookie.
-// httpOnly: cookie is invisible to JS, eliminating the XSS token-theft vector.
-// sameSite=strict: cookie is never sent on cross-site requests, providing
-// built-in CSRF protection for state-changing requests.
-// secure: only set in production so dev (http) still works.
-// All of these MUST match on clearCookie or some browsers ignore the clear.
 const ACCESS_COOKIE_BASE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -29,9 +23,6 @@ export class AuthenticationController {
   }
 
   public login = (req: Request, res: Response, next: NextFunction): void => {
-    // Captured here so we can log it on the failure path. Passport doesn't
-    // pass the original request body through to the verify callback in a
-    // shape that survives error branches.
     const attemptedEmail =
       typeof req.body?.email === "string"
         ? req.body.email.trim().toLowerCase()
@@ -59,8 +50,6 @@ export class AuthenticationController {
             outcome: "failure",
             ip,
             userAgent,
-            // The attempted email is logged so we can correlate brute-force
-            // patterns. We never log the attempted password.
             metadata: { attemptedEmail },
           });
           return next(
@@ -117,10 +106,6 @@ export class AuthenticationController {
 
       await this.authenticationService.startPasswordReset(parsed.data.email);
 
-      // Logged on every request (even for unknown emails) so we can detect
-      // enumeration scans. Storing the attempted email is OK here — the
-      // public response is intentionally enumeration-safe; the AUDIT row is
-      // for internal forensics, not for the requester.
       auditService.record({
         action: AuditAction.PasswordResetRequested,
         outcome: "success",
@@ -129,8 +114,6 @@ export class AuthenticationController {
         metadata: { attemptedEmail: parsed.data.email.trim().toLowerCase() },
       });
 
-      // Always 200 with the same generic message — privacy-preserving so the
-      // response shape doesn't leak whether the email is registered.
       const response: ApiResponse = {
         status: "success",
         message: SuccessMessages.RESET_LINK_SENT,
@@ -177,8 +160,6 @@ export class AuthenticationController {
   };
 
   public logout = (req: Request, res: Response): void => {
-    // Capture identity before clearing the cookie — req.user is unset if the
-    // request had no valid token, but we still log the attempt either way.
     const user = req.user as UserResponse | undefined;
     auditService.record({
       action: AuditAction.Logout,
@@ -189,16 +170,10 @@ export class AuthenticationController {
       userAgent: req.auditContext?.userAgent ?? null,
     });
 
-    // Must pass the same attributes used when setting the cookie, otherwise
-    // some browsers refuse to clear it.
     res.clearCookie("accessToken", ACCESS_COOKIE_BASE_OPTIONS);
     res.json({ status: "success", message: "Logged out." });
   };
 
-  // GET /api/auth/session — state-inquiry endpoint. Always 200; the body's
-  // `data` is the user when there's a valid session and null otherwise.
-  // Keeps DevTools clean on cold boot and lets the client treat
-  // logged-in/logged-out as the same code path.
   public session = (req: Request, res: Response): void => {
     const response: ApiResponse<UserResponse | null> = {
       status: "success",

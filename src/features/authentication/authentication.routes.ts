@@ -22,9 +22,6 @@ const authenticationController = new AuthenticationController(
 
 router.post("/login", loginLimiter, authenticationController.login);
 router.post("/logout", authenticationController.logout);
-// /session is a state-inquiry endpoint, not a protected resource. It uses
-// optionalJwt so a missing or stale cookie does not 401 the request — the
-// controller answers "yes you have a session" or "no you don't" with 200.
 router.get("/session", optionalJwt, authenticationController.session);
 router.post(
   "/reset-password/request",

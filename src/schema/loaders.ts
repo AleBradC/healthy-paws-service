@@ -39,7 +39,6 @@ export interface GraphQLContext {
   doctorLoaders: DoctorLoaders;
   petLoaders: PetLoaders;
   ownerLoaders: OwnerLoaders;
-  // Optional because not every test harness sets it; production always has it.
   audit?: {
     ip: string | null;
     userAgent: string | null;

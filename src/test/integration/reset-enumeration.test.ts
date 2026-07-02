@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { AuthenticationController } from "../../features/authentication/authentication.controller";
 
-// Account-enumeration parity for the password-reset endpoint.
-//
-// The contract: regardless of whether the email exists, the response shape
-// and status code MUST be identical. Any divergence (different message,
-// different status code, even an observably different response time over
-// many calls) leaks whether the email is registered.
 
 function makeRes() {
   const res = {} as Response;
@@ -46,10 +40,6 @@ describe("Password reset enumeration parity", () => {
   });
 
   it("returns the same success response for an unknown email (no enumeration)", async () => {
-    // Whatever the service does internally (silently no-op, or throw a
-    // soft NotFound that the service handles privately), the HTTP response
-    // must not leak it. The service contract is to resolve in all "user
-    // not found" cases — verify the controller honours that.
     startPasswordReset.mockResolvedValue(undefined);
     const res = makeRes();
     await controller.startPasswordReset(
@@ -66,8 +56,6 @@ describe("Password reset enumeration parity", () => {
   });
 
   it("emits the same JSON body for both known and unknown emails", async () => {
-    // Capture both response bodies and diff them — the literal JSON must
-    // be identical so an attacker can't byte-compare.
     startPasswordReset.mockResolvedValue(undefined);
 
     const knownRes = makeRes();
@@ -93,8 +81,6 @@ describe("Password reset enumeration parity", () => {
   });
 
   it("rejects malformed input with a 400 (validation error, distinct from enumeration)", async () => {
-    // This is the one place divergence is expected — but it's about syntax,
-    // not account existence. A garbage body must NOT reach the service.
     const res = makeRes();
     const next = vi.fn();
     await controller.startPasswordReset(

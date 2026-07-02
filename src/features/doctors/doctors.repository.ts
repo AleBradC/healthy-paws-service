@@ -118,7 +118,6 @@ export async function getDoctorById(doctorId: string): Promise<Doctor | null> {
   }
 }
 
-// doctorId IS users.id (shared primary key, see database.sql).
 export async function getEmailDoctor(doctorId: string): Promise<string | null> {
   const query = `SELECT email FROM Users WHERE id = $1;`;
   try {
@@ -356,7 +355,6 @@ export async function updateDoctorSpecialization(
   try {
     await client.query("BEGIN");
 
-    // Ensure the doctor-specialization relationship exists
     await client.query(
       `INSERT INTO Doctor_Specializations (doctor_id, specialization_id)
        VALUES ($1, $2)
@@ -364,7 +362,6 @@ export async function updateDoctorSpecialization(
       [doctorId, specializationId],
     );
 
-    // Fetch current service_ids for this doctor-specialization pair
     const currentDbServicesResult = await client.query(
       `SELECT service_id FROM Doctor_Service_Pricing WHERE doctor_id = $1 AND specialization_id = $2`,
       [doctorId, specializationId],

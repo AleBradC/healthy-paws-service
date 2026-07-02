@@ -2,13 +2,6 @@ import type { ApolloServerPlugin } from "@apollo/server";
 import type { GraphQLContext } from "../loaders";
 import { auditService, AuditAction } from "../../features/audit";
 
-// Audit every GraphQL mutation outcome. Queries are skipped — they are
-// idempotent reads and would 100x the audit volume for negligible forensic
-// value.
-//
-// We log at willSendResponse so we have both the resolved operation name and
-// the final error state available. The plugin never throws — auditService
-// itself is fire-and-forget, but we still guard against bugs in here.
 
 const expectedErrorCodes = new Set([
   "UNAUTHENTICATED",
@@ -38,8 +31,6 @@ export const auditMutations: ApolloServerPlugin<GraphQLContext> = {
 
           const outcome = denied ? "denied" : failed ? "failure" : "success";
 
-          // Surface only the first error code in metadata; full error
-          // payloads can contain PII and would inflate the row.
           const firstCode = errors[0]?.extensions?.code as string | undefined;
           const isExpected = firstCode && expectedErrorCodes.has(firstCode);
 
@@ -60,7 +51,6 @@ export const auditMutations: ApolloServerPlugin<GraphQLContext> = {
               : null,
           });
         } catch (err) {
-          // Plugin-internal failure must not break the response.
           console.error("auditMutations plugin failure:", err);
         }
       },

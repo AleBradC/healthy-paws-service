@@ -6,10 +6,6 @@ import { SystemError } from "../../errors/SystemError";
 import { PetErrorMessages, SystemErrorMessages } from "../../errors/constants";
 import { Pet } from "../../core/utils/types";
 
-/**
- * Verifies that a pet record belongs to the specified owner.
- * The roleId from the token is the ownerId.
- */
 export async function verifyPetOwnership(
   roleId: string,
   petId: string,
@@ -31,11 +27,6 @@ export async function verifyPetOwnership(
   }
 }
 
-/**
- * Verifies that a user has permission to access a pet record.
- * Owners can access their own pets.
- * Doctors can access pets if they have or had appointments with them.
- */
 export async function verifyPetAccess(
   roleId: string,
   role: string,

@@ -5,7 +5,7 @@ import { CreatePetInput, UpdatePetInput } from "../../schema/resolvers.types";
 export const petsService = {
   getPet: async (id: string, userId: string, userRole: string) => {
     await verifyPetAccess(userId, userRole, id);
-    return id; // Returns the ID so the resolver can load it via dataloader
+    return id;
   },
 
   createPet: async (input: CreatePetInput, userId: string) => {

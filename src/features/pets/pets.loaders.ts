@@ -31,7 +31,6 @@ async function batchOwnersByPetIds(
     [petIds],
   );
 
-  // Map pet_id to corresponding owner
   const petIdToOwner = new Map<string, Owner>();
   for (const row of result.rows) {
     petIdToOwner.set(row.pet_id, {
@@ -40,7 +39,6 @@ async function batchOwnersByPetIds(
     });
   }
 
-  // Return owners in same order as petIds, null if owner not found
   return petIds.map((petId) => petIdToOwner.get(petId) || null);
 }
 

@@ -4,8 +4,6 @@ import { AuditEventInput } from "./audit.types";
 export class AuditRepository {
   constructor(private readonly db: Pool) {}
 
-  // Append-only insert. No SELECT-then-write semantics; the audit table is
-  // intentionally simple so it cannot block the main request path on locks.
   public async insert(event: AuditEventInput): Promise<void> {
     await this.db.query(
       `INSERT INTO AuditEvents

@@ -1,6 +1,4 @@
-// ==================================================================
-// Generic & Query Args
-// ==================================================================
+
 export interface GetByIdArgs {
   id: string;
 }
@@ -12,11 +10,7 @@ export interface GetPaginationArgs {
   specializationId?: string;
 }
 
-// ==================================================================
-// Mutation Args
-// ==================================================================
 
-// --- Appointment ---
 export interface CreateAppointmentInput {
   petId: string;
   doctorId: string;
@@ -50,7 +44,6 @@ export interface RemoveAppointmentArgs {
   input: RemoveAppointmentInput;
 }
 
-// --- Nested Inputs for UpdateAppointment ---
 export interface AppointmentPetDetailsInput {
   name?: string;
   type?: string;
@@ -73,7 +66,6 @@ export interface ActiveTreatmentInput {
   end_date?: string;
 }
 
-// --- Pet ---
 export interface CreatePetInput {
   ownerId: string;
   name: string;
@@ -98,7 +90,6 @@ export interface UpdatePetArgs {
   input: UpdatePetInput;
 }
 
-// --- Doctor ---
 export interface UpdateDoctorProfileInput {
   doctorId: string;
   name?: string;
@@ -161,7 +152,6 @@ export interface RemoveDoctorAvailabilityArgs {
   input: RemoveDoctorAvailabilityInput;
 }
 
-// --- Owner ---
 export interface UpdateOwnerProfileInput {
   ownerId: string;
   name: string;

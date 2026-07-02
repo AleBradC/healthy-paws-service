@@ -44,7 +44,6 @@ export class RegistrationRepository {
       );
       const newUser = userResult.rows[0];
 
-      // Owners.id IS Users.id (shared primary key, see database.sql).
       await client.query("INSERT INTO Owners (id, name) VALUES ($1, $2)", [
         newUser.id,
         ownerName,
@@ -67,7 +66,7 @@ export class RegistrationRepository {
       return { id: newUser.id, email: newUser.email };
     } catch (err) {
       await client.query("ROLLBACK");
-      throw err; // raw DB error goes up to service
+      throw err;
     } finally {
       client.release();
     }
@@ -89,7 +88,6 @@ export class RegistrationRepository {
       );
       const newUser = userResult.rows[0];
 
-      // Doctors.id IS Users.id (shared primary key, see database.sql).
       await client.query(
         "INSERT INTO Doctors (id, name, clinic_name, clinic_address) VALUES ($1, $2, $3, $4)",
         [newUser.id, name, clinicName, clinicAddress],

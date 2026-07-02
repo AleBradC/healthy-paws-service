@@ -5,8 +5,6 @@ import { ClientErrorMessages } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
 import { ApiResponse } from "../utils/types";
 
-// body-parser tags its PayloadTooLargeError with `type: "entity.too.large"`,
-// which is more specific than just checking `statusCode === 413`.
 const isPayloadTooLargeError = (err: unknown): boolean =>
   !!err &&
   typeof err === "object" &&
@@ -40,9 +38,7 @@ export const globalErrorHandler = (
       stack: err.stack,
       originalError: err.originalError,
     });
-    // Capture the wrapped originalError when present so Sentry groups by the
-    // real cause (e.g. a Postgres error code) instead of by the SystemError
-    // wrapper, which has the same stack frame for every DB failure.
+
     Sentry.captureException(err.originalError ?? err, {
       tags: { error_class: "SystemError" },
       extra: { message: err.message },

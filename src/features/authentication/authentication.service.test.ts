@@ -71,7 +71,6 @@ describe("AuthenticationService", () => {
 
       expect(authRepo.findUserByEmail).toHaveBeenCalledWith(email);
       expect(authRepo.invalidatePreviousTokens).toHaveBeenCalledWith("user_123");
-      // (userId, sha256HexHash, expiresAt) — never the raw token.
       expect(authRepo.createResetToken).toHaveBeenCalledWith(
         "user_123",
         expect.stringMatching(/^[a-f0-9]{64}$/),

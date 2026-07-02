@@ -22,7 +22,6 @@ describe("AuditService", () => {
       userAgent: "vitest",
     });
 
-    // record() is fire-and-forget — yield so the promise chain completes.
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(mockRepo.insert).toHaveBeenCalledTimes(1);
@@ -40,9 +39,6 @@ describe("AuditService", () => {
     mockRepo.insert.mockRejectedValueOnce(dbErr);
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    // record() returns void synchronously; the assertion is that the
-    // following microtask flush does NOT trigger an unhandled rejection
-    // and does NOT throw out of this `it` block.
     expect(() =>
       service.record({
         action: AuditAction.LoginFailure,

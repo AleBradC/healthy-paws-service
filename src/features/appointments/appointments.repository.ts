@@ -21,9 +21,6 @@ import {
 } from "../../errors/constants";
 import { Appointment } from "../../core/utils/types";
 
-/**
- * Verifies that an appointment belongs to the user (either the doctor or the owner of the pet).
- */
 export async function verifyAppointmentOwnership(
   roleId: string,
   role: string,
@@ -74,7 +71,6 @@ export async function createAppointment(
 ): Promise<Appointment | null> {
   const { petId, doctorId, consultationType } = input;
   const appointmentDatetime = new Date(input.appointmentDatetime).toISOString();
-  // New appointments start as Pending for Approval
   const status = "Pending";
 
   const client = await pool.connect();
@@ -82,7 +78,6 @@ export async function createAppointment(
   try {
     await client.query("BEGIN");
 
-    // Check if slot is available and occupy it
     const availResult = await client.query(
       `DELETE FROM Availabilities 
        WHERE doctor_id = $1 AND available_datetime = $2
@@ -91,7 +86,6 @@ export async function createAppointment(
     );
 
     if (availResult.rows.length === 0) {
-      // Check if there's an active appointment for this slot
       const appointmentCheck = await client.query(
         `SELECT id FROM Appointments 
          WHERE doctor_id = $1 AND appointment_datetime = $2 
@@ -164,8 +158,6 @@ export async function removeAppointment(
       );
     }
     const appointmentData = appointmentResult.rows[0];
-
-    // Restore availability if it's not already terminal
     const isCurrentlyActive = !["Cancelled", "Denied"].includes(
       appointmentData.status,
     );
@@ -342,7 +334,6 @@ export async function updateAppointment(
         ],
       );
 
-      // If status changed to Cancelled or Denied, restore availability
       const wasActive = !["Cancelled", "Denied"].includes(oldStatus);
       const isBecomingInactive = ["Cancelled", "Denied"].includes(status ?? "");
 

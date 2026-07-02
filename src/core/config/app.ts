@@ -1,9 +1,6 @@
 import { SystemError } from "../../errors/SystemError";
 import { SystemErrorMessages } from "../../errors/constants";
 
-// Single source of truth for the frontend URL used in emails (reset links etc).
-// Required in production; falls back to the Vite dev origin otherwise. Validated
-// once at module load so misconfigured deployments fail fast at boot.
 const fromEnv = process.env.FRONTEND_URL?.trim();
 const devDefault =
   process.env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined;

@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ROLES } from "./constants";
 
-// Row from Users table (DB record, includes all fields).
-// Only use this where password_hash is explicitly required (e.g. validateUser).
 export interface UserRecord {
   id: string;
   email: string;
@@ -10,15 +8,12 @@ export interface UserRecord {
   role: ROLES;
 }
 
-// Projection of Users row without credentials.
-// Use as the return type of any lookup that does NOT need the password hash.
 export interface SafeUserRecord {
   id: string;
   email: string;
   role: ROLES;
 }
 
-// --- DB Repository Method Argument Types ---
 export interface CreateOwnerArgs {
   email: string;
   hash: string;
@@ -33,9 +28,6 @@ export interface CreateDoctorArgs {
   doctorData: DoctorPayload;
 }
 
-/* ----------------------------------------------------------
-   PAYLOAD / DTO TYPES
----------------------------------------------------------- */
 
 export interface UserResponse {
   id: string;
@@ -44,16 +36,15 @@ export interface UserResponse {
 }
 
 export interface JwtPayload {
-  id:   string;
+  id: string;
   email: string;
-  role:  ROLES;
-  iss?:  string;
-  aud?:  string | string[];
-  iat?:  number;
-  exp?:  number;
+  role: ROLES;
+  iss?: string;
+  aud?: string | string[];
+  iat?: number;
+  exp?: number;
 }
 
-// Registration owner payload (request DTO)
 export interface OwnerPayload {
   name: string;
   email: string;
@@ -91,11 +82,7 @@ export interface UnifiedRegisterPayload {
   doctor?: DoctorPayload;
 }
 
-/* ----------------------------------------------------------
-   REGISTRATION TYPES
----------------------------------------------------------- */
 
-// For registration service/controller (combines payloads for user creation)
 export interface RegisterOwnerPayload {
   owner: OwnerPayload;
   pet: PetPayload;
@@ -104,11 +91,7 @@ export interface RegisterDoctorPayload {
   doctor: DoctorPayload;
 }
 
-/* ----------------------------------------------------------
-   AUTHENTICATION TYPES
----------------------------------------------------------- */
 
-// Method Parameters (Passed into Auth/Registration services etc)
 export interface ValidateUserParams {
   email: string;
   password: string;
@@ -128,9 +111,6 @@ export interface UpdateUserPasswordParams {
   hash: string;
 }
 
-/* ----------------------------------------------------------
-   CONTROLLER PARAMETER TYPES
----------------------------------------------------------- */
 
 export interface LoginControllerParams {
   req: Request;
@@ -142,9 +122,6 @@ export interface ResetPasswordControllerParams {
   res: Response;
 }
 
-/* ----------------------------------------------------------
-   METHOD RETURN TYPES
----------------------------------------------------------- */
 
 export interface AuthResult {
   user: UserResponse | null;
@@ -167,9 +144,6 @@ export interface RegisterUserResult {
   email: string;
 }
 
-/* ----------------------------------------------------------
-   MISCELLANEOUS STRUCTURES
----------------------------------------------------------- */
 
 export interface PasswordResetTokenData {
   userId: string;
@@ -179,7 +153,6 @@ export type PasswordResetTokens = {
   [token: string]: PasswordResetTokenData;
 };
 
-// --- GRAPHQL ENTITY TYPES ---
 
 export interface Owner {
   id: string;
@@ -221,7 +194,15 @@ export interface Appointment {
   datetime: string;
   patient?: Pet;
   doctor?: Doctor;
-  status?: "Pending" | "Confirmed" | "Denied" | "Upcoming" | "Start" | "Completed" | "Cancelled" | string;
+  status?:
+    | "Pending"
+    | "Confirmed"
+    | "Denied"
+    | "Upcoming"
+    | "Start"
+    | "Completed"
+    | "Cancelled"
+    | string;
   reason?: string;
   consultation_type?: string;
   investigation?: string;
@@ -260,7 +241,6 @@ export interface ActiveTreatment {
   end_date?: string;
 }
 
-// --- STANDARDIZED API RESPONSE ---
 export interface ApiResponse<T = any> {
   status: "success" | "error";
   message?: string;

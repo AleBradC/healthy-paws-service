@@ -9,9 +9,6 @@ export class AuthenticationRepository {
   }
 
   public async findUserByEmail(email: string): Promise<UserRecord | null> {
-    // Explicit column list (not `SELECT *`) so adding new sensitive columns
-    // to Users in future migrations doesn't silently start leaking them
-    // through this method.
     const result: QueryResult<UserRecord> = await this.db.query(
       `SELECT id, email, password_hash, role
          FROM Users WHERE email = $1`,

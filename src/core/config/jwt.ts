@@ -2,9 +2,6 @@ import type { SignOptions } from "jsonwebtoken";
 import { SystemErrorMessages } from "../../errors/constants";
 import { SystemError } from "../../errors/SystemError";
 
-// Single source of truth for JWT config. Env is read and validated once at
-// module load — fail-fast at boot for missing JWT_SECRET, and the sign side
-// and verify side cannot drift because they consume the same frozen object.
 const secret = process.env.JWT_SECRET;
 if (!secret) {
   throw new SystemError(SystemErrorMessages.JWT_SECRET_UNDEFINED);

@@ -5,9 +5,6 @@ import {
   extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
 
-// Must run before any zod schemas are introspected — patches the prototype
-// so existing schemas defined elsewhere become OpenAPI-compatible without
-// needing to be rewritten.
 extendZodWithOpenApi(z);
 
 import {
@@ -77,7 +74,6 @@ const registerDoctorRequestSchema = z
 
 const registry = new OpenAPIRegistry();
 
-// ---- Auth ----------------------------------------------------------------
 
 registry.registerPath({
   method: "post",
@@ -188,7 +184,6 @@ registry.registerPath({
 });
 
 
-// ---- Registration --------------------------------------------------------
 
 registry.registerPath({
   method: "post",
@@ -257,8 +252,6 @@ registry.registerPath({
 let cachedDocument: ReturnType<OpenApiGeneratorV3["generateDocument"]> | null =
   null;
 
-// Generate once and cache — the spec is fully static so re-running the
-// generator on every request would waste CPU.
 export function buildOpenApiDocument() {
   if (cachedDocument) return cachedDocument;
   const generator = new OpenApiGeneratorV3(registry.definitions);

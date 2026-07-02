@@ -4,7 +4,6 @@ import { RegistrationRepository } from "./registration.repository";
 
 import { ClientError } from "../../errors/ClientError";
 
-// Mock dependencies
 vi.mock("./registration.repository");
 vi.mock("../../helpers", () => ({
   hashPassword: vi.fn().mockResolvedValue("hashed_password"),

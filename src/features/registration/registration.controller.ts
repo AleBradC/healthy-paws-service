@@ -45,8 +45,6 @@ export class RegistrationController {
         throw new ClientError(message, 400);
       }
 
-      // Strip confirmPassword at the controller boundary so it never reaches
-      // the service or repository.
       const { confirmPassword: _oc, ...ownerData } = ownerResult.data;
       const payload: RegisterOwnerPayload = {
         owner: ownerData,
@@ -84,8 +82,6 @@ export class RegistrationController {
         throw new ClientError(message, 400);
       }
 
-      // Strip confirmPassword at the controller boundary so it never reaches
-      // the service or repository.
       const { confirmPassword: _dc, ...doctorData } = doctorResult.data;
       const newDoctor = await this.registrationService.registerDoctor({
         doctor: doctorData,

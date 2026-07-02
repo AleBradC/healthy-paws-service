@@ -32,7 +32,6 @@ async function buildTransport(): Promise<Transporter> {
   });
 }
 
-// Exported for tests that want to force a rebuild after mutating process.env.
 export function __resetMailerForTests(): void {
   cachedTransport = null;
 }
@@ -58,7 +57,6 @@ export async function sendMail(params: SendMailParams): Promise<void> {
     html: params.html,
   });
 
-  // Dev mode (Ethereal): print the generated URL so the developer can click it.
   if (!process.env.MAIL_HOST) {
     console.log(`💌 Email sent for testing to: ${params.to}`);
     console.log(`👀 Preview URL: ${nodemailer.getTestMessageUrl(info)}`);

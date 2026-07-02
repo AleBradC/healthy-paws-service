@@ -8,7 +8,6 @@ import {
 } from "../../errors/constants";
 import { Pet, Owner } from "../../core/utils/types";
 
-// ownerId IS users.id (shared primary key, see database.sql).
 export async function getOwnerEmail(ownerId: string): Promise<string | null> {
   const query = `SELECT email FROM Users WHERE id = $1;`;
   try {

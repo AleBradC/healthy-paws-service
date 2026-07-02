@@ -30,7 +30,6 @@ export enum SuccessMessages {
   DOCTOR_REGISTERED = "Doctor registered successfully.",
 }
 
-// --- GraphQL Error Constants ---
 
 export enum PostgresErrorCode {
   UNIQUE_VIOLATION = "23505",

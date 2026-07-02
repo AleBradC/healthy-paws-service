@@ -1,7 +1,4 @@
 import "dotenv/config";
-
-// Sentry MUST be imported and initialised before any other module that touches
-// http/https or Express — the SDK monkey-patches those globals at import time.
 import { initSentry } from "./core/observability/sentry";
 initSentry();
 
@@ -44,17 +41,8 @@ const app = express();
 const httpServer = http.createServer(app);
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
-// Number of reverse-proxy hops to trust for X-Forwarded-* headers.
-// Dev compose (nginx -> backend) = 1. Production (Cloudflare -> nginx ->
-// backend) = 2. Set TRUST_PROXY=2 in the EC2 .env. Critical for both
-// req.ip accuracy and express-rate-limit bucketing — without this, every
-// request appears to come from the reverse proxy and the limiter quickly
-// bans real users while letting attackers through.
 app.set("trust proxy", parseInt(process.env.TRUST_PROXY || "1", 10));
 
-// Build the CORS origin list from env — no origins are hardcoded in source.
-// Set ALLOWED_ORIGINS=https://your-domain.com in production.
-// Dev fallback applies only when NODE_ENV is not "production".
 const getAllowedOrigins = (): string[] => {
   if (process.env.ALLOWED_ORIGINS) {
     return process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim());
@@ -65,44 +53,32 @@ const getAllowedOrigins = (): string[] => {
   return [];
 };
 
-// helmet must be first to ensure security headers are set on every response.
 app.use(helmet());
 app.use(
   cors({
     origin: getAllowedOrigins(),
     credentials: true,
-  })
+  }),
 );
 app.use(cookieParser());
 app.use(bodyParser.json(BODY_PARSER_JSON_OPTIONS));
 app.use(bodyParser.urlencoded(BODY_PARSER_URLENCODED_OPTIONS));
 app.use(passport.initialize());
-// Attaches req.auditContext (ip + user-agent) so controllers and the GraphQL
-// audit plugin can record forensic detail without re-parsing headers.
 app.use(auditContextMiddleware);
 
-// REST Routes
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/auth", registrationRoutes);
 
-
-// OpenAPI spec for the REST surface. Served as static JSON so external
-// clients (mobile apps, integrations) can codegen against a typed contract.
-// The document is built once at startup from the same Zod schemas the
-// runtime validates against, so it can never drift from the implementation.
 app.get("/api/openapi.json", (_req, res) => {
   res.json(buildOpenApiDocument());
 });
 
-// Liveness + readiness probe. Returns 200 only if the database round-trips
-// within 1s. Used by Docker compose healthcheck and the deploy script to
-// gate rollout. Kept outside /api so it's not accidentally rate-limited.
 app.get("/healthz", async (_req, res) => {
   try {
     await Promise.race([
       pool.query("SELECT 1"),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("db timeout")), 1000)
+        setTimeout(() => reject(new Error("db timeout")), 1000),
       ),
     ]);
     res.json({ status: "ok" });
@@ -114,12 +90,9 @@ app.get("/healthz", async (_req, res) => {
 const startServer = async () => {
   const typeDefs = readFileSync(
     path.join(__dirname, "schema/typeDefs.graphql"),
-    { encoding: "utf-8" }
+    { encoding: "utf-8" },
   );
 
-  // graphql-armor provides depth limit, cost limit, alias/directive/token limit
-  // and disables field suggestions. Introspection is disabled in production
-  // explicitly so error messages cannot leak the schema shape.
   const armor = new ApolloArmor({
     blockFieldSuggestion: { enabled: true },
     maxDepth: { n: 8 },
@@ -153,34 +126,34 @@ const startServer = async () => {
         console.log("Successfully connected to the database.");
         break;
       } catch (err) {
-        console.log(`Failed to connect to DB, retrying... (${retries} attempts left)`);
+        console.log(
+          `Failed to connect to DB, retrying... (${retries} attempts left)`,
+        );
         retries -= 1;
         if (retries === 0) throw err;
-        await new Promise(res => setTimeout(res, 3000));
+        await new Promise((res) => setTimeout(res, 3000));
       }
     }
     if (dataBase) dataBase.release();
 
     await server.start();
 
-    // GraphQL Route
     app.use(
       "/graphql",
       (req, res, next) => {
-        // GraphQL accepts both authenticated and anonymous requests; the
-        // requireAuthMutations plugin and per-resolver requireAuth wrappers
-        // enforce gating. Only forward truly unexpected errors here — a
-        // missing or invalid token is normal and must fall through as
-        // anonymous so unauthenticated queries can still be evaluated.
-        passport.authenticate("jwt", { session: false }, (err: any, user: any) => {
-          if (err) {
-            return next(err);
-          }
-          if (user) {
-            req.user = user;
-          }
-          next();
-        })(req, res, next);
+        passport.authenticate(
+          "jwt",
+          { session: false },
+          (err: any, user: any) => {
+            if (err) {
+              return next(err);
+            }
+            if (user) {
+              req.user = user;
+            }
+            next();
+          },
+        )(req, res, next);
       },
       expressMiddleware(server, {
         context: async ({ req }) => {
@@ -193,26 +166,19 @@ const startServer = async () => {
             audit: req.auditContext ?? { ip: null, userAgent: null },
           };
         },
-      })
+      }),
     );
 
-    // Sentry's Express error handler must come BEFORE our globalErrorHandler.
-    // It captures exceptions that bubbled out of route handlers and passes the
-    // error along the chain, so globalErrorHandler still formats the response.
     Sentry.setupExpressErrorHandler(app);
 
     app.use(globalErrorHandler);
 
     await new Promise<void>((resolve) =>
-      httpServer.listen({ port: PORT }, resolve)
+      httpServer.listen({ port: PORT }, resolve),
     );
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
-    console.log(`🚀 GraphQL ready at http://localhost:${PORT}/graphql`);
+    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`GraphQL ready at http://localhost:${PORT}/graphql`);
 
-    // Graceful shutdown: stop accepting new connections, drain in-flight
-    // requests, stop Apollo, then close the DB pool. Docker sends SIGTERM
-    // on `docker compose down` / rolling restart; without this, requests
-    // mid-flight get RST'd and the pg pool leaks connections.
     const shutdown = async (signal: string) => {
       console.log(`Received ${signal}, shutting down gracefully.`);
       const force = setTimeout(() => {
@@ -221,7 +187,7 @@ const startServer = async () => {
       }, 10_000);
       try {
         await new Promise<void>((resolve, reject) =>
-          httpServer.close((err) => (err ? reject(err) : resolve()))
+          httpServer.close((err) => (err ? reject(err) : resolve())),
         );
         await server.stop();
         await pool.end();

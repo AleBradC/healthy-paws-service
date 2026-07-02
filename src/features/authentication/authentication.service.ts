@@ -21,18 +21,8 @@ import { sendMail } from "../../core/mailer";
 import { hashPassword } from "../../core/utils/helpers";
 import { UserResponse, SafeUserRecord } from "../../core/utils/types";
 
-// Computed once at module load. Used in validateUser to ensure the "unknown email"
-// path always runs a full bcrypt comparison, preventing timing-based enumeration.
 const DUMMY_HASH = bcrypt.hashSync("__dummy__", 12);
 
-// Discriminated union returned by validateUser. The LocalStrategy converts
-// these into Passport done(...) calls; the controller then translates to a
-// distinct HTTP response per branch.
-//
-// Enumeration safety contract: an attacker who supplies a wrong password
-// MUST receive `invalid-credentials` regardless of whether the email exists.
-// Only after a correct password match do we differentiate between verified
-// and unverified accounts.
 export type ValidateUserResult =
   | { status: "ok"; user: UserResponse }
   | { status: "invalid-credentials" };
@@ -69,8 +59,6 @@ export class AuthenticationService {
       const user =
         await this.authenticationRepository.findUserByEmail(normalizedEmail);
 
-      // Always run bcrypt.compare so unknown-email and wrong-password paths
-      // take the same wall-clock time, preventing timing-based enumeration.
       const hashToCompare = user ? user.password_hash : DUMMY_HASH;
       const isMatch = await bcrypt.compare(password, hashToCompare);
 
@@ -101,13 +89,9 @@ export class AuthenticationService {
       const user =
         await this.authenticationRepository.findUserByEmail(normalizedEmail);
       if (!user) {
-        // Silently succeed — never reveal whether an email is registered.
         return;
       }
 
-      // 32 random bytes -> ~256 bits of entropy. Raw token is base64url so it's
-      // URL-safe; only the SHA-256 hex digest is persisted, so a DB leak can't
-      // be used to reset anyone's password.
       const rawToken = crypto.randomBytes(32).toString("base64url");
       const tokenHash = crypto
         .createHash("sha256")
@@ -155,8 +139,6 @@ export class AuthenticationService {
     }
   }
 
-  // Returns the affected user_id so the controller can record an audit event
-  // tied to the right account without re-querying.
   public async resetPassword(
     token: string,
     newPassword: string,

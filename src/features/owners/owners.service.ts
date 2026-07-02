@@ -5,7 +5,7 @@ import { UpdateOwnerProfileInput } from "../../schema/resolvers.types";
 export const ownersService = {
   getOwner: async (id: string, userId: string) => {
     await verifyOwnerOwnership(userId, id);
-    return id; // Return ID to be loaded via Dataloader by the resolver
+    return id;
   },
 
   updateOwnerProfile: async (

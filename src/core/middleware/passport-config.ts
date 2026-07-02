@@ -46,8 +46,6 @@ passport.use(
   ),
 );
 
-// Extract the JWT from the httpOnly cookie instead of the Authorization header.
-// The cookie is inaccessible to JavaScript, preventing XSS token theft.
 const cookieExtractor = (req: Request): string | null =>
   req?.cookies?.accessToken ?? null;
 

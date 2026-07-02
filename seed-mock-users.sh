@@ -1,6 +1,4 @@
 #!/bin/bash
-# Seed 5 owners and 5 doctors via the registration API
-# Password for all users: Test@1234
 
 BASE_URL="http://localhost/api/auth"
 
@@ -8,7 +6,6 @@ echo "========================================="
 echo "  Seeding 5 Owners (with pets)"
 echo "========================================="
 
-# Owner 1
 echo -e "\n→ Registering Owner 1: Alexandra Brad"
 curl -s -X POST "$BASE_URL/register/owner" \
   -H "Content-Type: application/json" \
@@ -29,7 +26,6 @@ curl -s -X POST "$BASE_URL/register/owner" \
   }'
 echo ""
 
-# Owner 2
 echo -e "\n→ Registering Owner 2: Mihai Enescu"
 curl -s -X POST "$BASE_URL/register/owner" \
   -H "Content-Type: application/json" \
@@ -50,7 +46,6 @@ curl -s -X POST "$BASE_URL/register/owner" \
   }'
 echo ""
 
-# Owner 3
 echo -e "\n→ Registering Owner 3: Andreea Constantinescu"
 curl -s -X POST "$BASE_URL/register/owner" \
   -H "Content-Type: application/json" \
@@ -71,7 +66,6 @@ curl -s -X POST "$BASE_URL/register/owner" \
   }'
 echo ""
 
-# Owner 4
 echo -e "\n→ Registering Owner 4: Radu Marinescu"
 curl -s -X POST "$BASE_URL/register/owner" \
   -H "Content-Type: application/json" \
@@ -92,7 +86,6 @@ curl -s -X POST "$BASE_URL/register/owner" \
   }'
 echo ""
 
-# Owner 5
 echo -e "\n→ Registering Owner 5: Diana Florea"
 curl -s -X POST "$BASE_URL/register/owner" \
   -H "Content-Type: application/json" \
@@ -117,7 +110,6 @@ echo -e "\n========================================="
 echo "  Seeding 5 Doctors"
 echo "========================================="
 
-# Doctor 1
 echo -e "\n→ Registering Doctor 1: Stefan Vladescu"
 curl -s -X POST "$BASE_URL/register/doctor" \
   -H "Content-Type: application/json" \
@@ -142,7 +134,6 @@ curl -s -X POST "$BASE_URL/register/doctor" \
   }'
 echo ""
 
-# Doctor 2
 echo -e "\n→ Registering Doctor 2: Cristina Moldovan"
 curl -s -X POST "$BASE_URL/register/doctor" \
   -H "Content-Type: application/json" \
@@ -174,7 +165,6 @@ curl -s -X POST "$BASE_URL/register/doctor" \
   }'
 echo ""
 
-# Doctor 3
 echo -e "\n→ Registering Doctor 3: Bogdan Petrescu"
 curl -s -X POST "$BASE_URL/register/doctor" \
   -H "Content-Type: application/json" \
@@ -199,7 +189,6 @@ curl -s -X POST "$BASE_URL/register/doctor" \
   }'
 echo ""
 
-# Doctor 4
 echo -e "\n→ Registering Doctor 4: Irina Neagu"
 curl -s -X POST "$BASE_URL/register/doctor" \
   -H "Content-Type: application/json" \
@@ -231,7 +220,6 @@ curl -s -X POST "$BASE_URL/register/doctor" \
   }'
 echo ""
 
-# Doctor 5
 echo -e "\n→ Registering Doctor 5: Adrian Popescu"
 curl -s -X POST "$BASE_URL/register/doctor" \
   -H "Content-Type: application/json" \

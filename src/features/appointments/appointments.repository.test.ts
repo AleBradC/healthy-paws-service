@@ -8,7 +8,6 @@ import {
 import pool from "../../core/config/db";
 import { GraphQLError } from "graphql";
 
-// Mock the pg pool
 const mockClient = {
   query: vi.fn(),
   release: vi.fn(),
@@ -36,8 +35,12 @@ describe("AppointmentsRepository", () => {
   describe("getAppointmentById", () => {
     it("should return an appointment if found", async () => {
       const mockDate = new Date("2023-10-01T10:00:00Z");
-      const dbRow = { id: "1", appointment_datetime: mockDate, pet_id: "pet_1" };
-      
+      const dbRow = {
+        id: "1",
+        appointment_datetime: mockDate,
+        pet_id: "pet_1",
+      };
+
       vi.mocked(pool.query).mockResolvedValue({
         rows: [dbRow],
       } as any);
@@ -59,15 +62,15 @@ describe("AppointmentsRepository", () => {
         status: "Pending",
         consultationType: "Physical",
       };
-      
+
       const mockDate = new Date(input.appointmentDatetime);
-      const dbRow = { 
-        id: "new_1", 
-        pet_id: "pet_1", 
-        doctor_id: "doc_1", 
+      const dbRow = {
+        id: "new_1",
+        pet_id: "pet_1",
+        doctor_id: "doc_1",
         appointment_datetime: mockDate,
         status: "Pending",
-        consultation_type: "Physical"
+        consultation_type: "Physical",
       };
 
       const mockTransClient = {
@@ -76,18 +79,24 @@ describe("AppointmentsRepository", () => {
       };
       vi.mocked(pool.connect).mockResolvedValue(mockTransClient as any);
 
-      // Simulation: BEGIN, avail DELETE (found), INSERT, COMMIT
-      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-      mockTransClient.query.mockResolvedValueOnce({ rows: [{ id: 'avail_1' }] }); // DELETE availability
-      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // INSERT appointment
-      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] });
+      mockTransClient.query.mockResolvedValueOnce({
+        rows: [{ id: "avail_1" }],
+      });
+      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] });
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] });
 
       const result = await createAppointment(input as any);
 
       expect(result).toBeDefined();
       expect(result?.status).toBe("Pending");
-      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("BEGIN"));
-      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO Appointments"), expect.any(Array));
+      expect(mockTransClient.query).toHaveBeenCalledWith(
+        expect.stringContaining("BEGIN"),
+      );
+      expect(mockTransClient.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO Appointments"),
+        expect.any(Array),
+      );
       expect(mockTransClient.release).toHaveBeenCalled();
     });
   });
@@ -96,12 +105,12 @@ describe("AppointmentsRepository", () => {
     it("should update status to 'Cancel' and restore availability", async () => {
       const input = { appointmentId: "appt_1" };
       const mockDate = new Date("2023-10-01T10:00:00Z");
-      const dbRow = { 
-        id: "appt_1", 
-        pet_id: "pet_1", 
-        doctor_id: "doc_1", 
+      const dbRow = {
+        id: "appt_1",
+        pet_id: "pet_1",
+        doctor_id: "doc_1",
         appointment_datetime: mockDate,
-        status: "Confirmed" // Current status
+        status: "Confirmed",
       };
 
       const mockTransClient = {
@@ -110,35 +119,48 @@ describe("AppointmentsRepository", () => {
       };
       vi.mocked(pool.connect).mockResolvedValue(mockTransClient as any);
 
-      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] }); // SELECT current
-      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE to Cancel
-      mockTransClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] });
+      mockTransClient.query.mockResolvedValueOnce({ rows: [dbRow] });
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] });
+      mockTransClient.query.mockResolvedValueOnce({ rows: [] });
 
       const result = await removeAppointment(input);
 
       expect(result).toBeDefined();
-      expect(mockTransClient.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE Appointments SET status = 'Cancelled'"), expect.any(Array));
+      expect(mockTransClient.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE Appointments SET status = 'Cancelled'"),
+        expect.any(Array),
+      );
       expect(mockTransClient.release).toHaveBeenCalled();
     });
   });
 
   describe("verifyAppointmentOwnership", () => {
     it("should not throw if doctor owns the appointment", async () => {
-      vi.mocked(pool.query).mockResolvedValue({ rowCount: 1, rows: [{ 1: 1 }] } as any);
-      await expect(verifyAppointmentOwnership("doc-1", "doctor", "appt-1")).resolves.not.toThrow();
+      vi.mocked(pool.query).mockResolvedValue({
+        rowCount: 1,
+        rows: [{ 1: 1 }],
+      } as any);
+      await expect(
+        verifyAppointmentOwnership("doc-1", "doctor", "appt-1"),
+      ).resolves.not.toThrow();
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining("WHERE id = $1 AND doctor_id = $2"),
-        ["appt-1", "doc-1"]
+        ["appt-1", "doc-1"],
       );
     });
 
     it("should not throw if owner owns the pet in the appointment", async () => {
-      vi.mocked(pool.query).mockResolvedValue({ rowCount: 1, rows: [{ 1: 1 }] } as any);
-      await expect(verifyAppointmentOwnership("owner-1", "owner", "appt-1")).resolves.not.toThrow();
+      vi.mocked(pool.query).mockResolvedValue({
+        rowCount: 1,
+        rows: [{ 1: 1 }],
+      } as any);
+      await expect(
+        verifyAppointmentOwnership("owner-1", "owner", "appt-1"),
+      ).resolves.not.toThrow();
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining("JOIN Pets p ON a.pet_id = p.id"),
-        ["appt-1", "owner-1"]
+        ["appt-1", "owner-1"],
       );
     });
 
@@ -149,7 +171,9 @@ describe("AppointmentsRepository", () => {
       } catch (error) {
         const gqlError = error as GraphQLError;
         expect(gqlError).toBeInstanceOf(GraphQLError);
-        expect(gqlError.message).toBe("You do not have permission to access or modify this appointment.");
+        expect(gqlError.message).toBe(
+          "You do not have permission to access or modify this appointment.",
+        );
         expect(gqlError.extensions.code).toBe("FORBIDDEN");
       }
     });

@@ -10,8 +10,6 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reportsDirectory: "./coverage",
-      // Project-wide floor. Auth and authorization modules carry a higher
-      // bar because regressions there directly become security issues.
       thresholds: {
         lines: 60,
         functions: 60,

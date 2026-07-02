@@ -37,7 +37,6 @@ export const resolvers = {
     ...wrapResolvers(ownersResolvers.Mutation),
     ...wrapResolvers(petsResolvers.Mutation),
   },
-  // Type resolvers
   Doctor: doctorsResolvers.Doctor,
   Specialization: doctorsResolvers.Specialization,
   Owner: ownersResolvers.Owner,

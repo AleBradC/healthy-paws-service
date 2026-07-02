@@ -12,7 +12,6 @@ async function batchDoctors(
   return ids.map((id) => doctorMap.get(id) || null);
 }
 
-// Batch load specializations by doctor IDs
 async function batchSpecializationsByDoctor(
   doctorIds: readonly string[],
 ): Promise<Specialization[][]> {
@@ -23,33 +22,28 @@ async function batchSpecializationsByDoctor(
     [doctorIds],
   );
   const map = new Map<string, Specialization[]>();
-  doctorIds.forEach((id) => map.set(id, [])); // initialize empty array for each doctor
+  doctorIds.forEach((id) => map.set(id, []));
   for (const row of result.rows) {
     map.get(row.doctor_id)!.push(row);
   }
   return doctorIds.map((id) => map.get(id)!);
 }
 
-// Batch load services by (doctor_id, specialization_id) keys
 async function batchServicesByDoctorAndSpecialization(
   keys: readonly { doctorId: string; specializationId: string }[],
 ): Promise<Service[][]> {
   if (keys.length === 0) return [];
 
-  // Filter out keys with undefined doctorId or specializationId to avoid invalid queries
   const validKeys = keys.filter(
     (k) => k.doctorId !== undefined && k.specializationId !== undefined,
   );
 
   if (validKeys.length === 0) {
-    // If no valid keys, return empty arrays matching original keys
     return keys.map(() => []);
   }
 
-  // Collect unique doctorIds from valid keys for querying
   const doctorIds = Array.from(new Set(validKeys.map((k) => k.doctorId)));
 
-  // Query all services for these doctorIds
   const result = await pool.query(
     `SELECT s.id, dsp.specialization_id, s.name, dsp.price, dsp.doctor_id
      FROM Doctor_Service_Pricing dsp
@@ -58,7 +52,6 @@ async function batchServicesByDoctorAndSpecialization(
     [doctorIds],
   );
 
-  // Group result services by doctorId and specializationId
   const map = new Map<string, Service[]>();
 
   for (const { doctor_id, specialization_id, ...service } of result.rows) {
@@ -69,7 +62,6 @@ async function batchServicesByDoctorAndSpecialization(
     map.get(key)!.push({ ...service, price: parseFloat(service.price) });
   }
 
-  // Map back to original keys preserving order, returning empty array if no services found
   return keys.map(({ doctorId, specializationId }) => {
     if (doctorId === undefined || specializationId === undefined) {
       return [];
