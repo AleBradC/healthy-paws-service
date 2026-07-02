@@ -53,7 +53,13 @@ const getAllowedOrigins = (): string[] => {
   return [];
 };
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: process.env.NODE_ENV === "production",
+    contentSecurityPolicy:
+      process.env.NODE_ENV === "production" ? undefined : false,
+  }),
+);
 app.use(
   cors({
     origin: getAllowedOrigins(),
