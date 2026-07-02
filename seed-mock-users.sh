@@ -3,111 +3,7 @@
 BASE_URL="http://localhost/api/auth"
 
 echo "========================================="
-echo "  Seeding 5 Owners (with pets)"
-echo "========================================="
-
-echo -e "\n→ Registering Owner 1: Alexandra Brad"
-curl -s -X POST "$BASE_URL/register/owner" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": {
-      "name": "Alexandra Brad",
-      "email": "alexandra.brad@gmail.com",
-      "password": "Test@1234",
-      "confirmPassword": "Test@1234"
-    },
-    "pet": {
-      "name": "Charlie",
-      "type": "Dog",
-      "breed": "Golden Retriever",
-      "age": 3,
-      "weight": 30
-    }
-  }'
-echo ""
-
-echo -e "\n→ Registering Owner 2: Mihai Enescu"
-curl -s -X POST "$BASE_URL/register/owner" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": {
-      "name": "Mihai Enescu",
-      "email": "mihai.enescu@gmail.com",
-      "password": "Test@1234",
-      "confirmPassword": "Test@1234"
-    },
-    "pet": {
-      "name": "Milo",
-      "type": "Cat",
-      "breed": "Siamese",
-      "age": 2,
-      "weight": 4.5
-    }
-  }'
-echo ""
-
-echo -e "\n→ Registering Owner 3: Andreea Constantinescu"
-curl -s -X POST "$BASE_URL/register/owner" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": {
-      "name": "Andreea Constantinescu",
-      "email": "andreea.constantinescu@gmail.com",
-      "password": "Test@1234",
-      "confirmPassword": "Test@1234"
-    },
-    "pet": {
-      "name": "Bella",
-      "type": "Dog",
-      "breed": "French Bulldog",
-      "age": 5,
-      "weight": 12
-    }
-  }'
-echo ""
-
-echo -e "\n→ Registering Owner 4: Radu Marinescu"
-curl -s -X POST "$BASE_URL/register/owner" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": {
-      "name": "Radu Marinescu",
-      "email": "radu.marinescu@gmail.com",
-      "password": "Test@1234",
-      "confirmPassword": "Test@1234"
-    },
-    "pet": {
-      "name": "Luna",
-      "type": "Cat",
-      "breed": "British Shorthair",
-      "age": 1,
-      "weight": 3.8
-    }
-  }'
-echo ""
-
-echo -e "\n→ Registering Owner 5: Diana Florea"
-curl -s -X POST "$BASE_URL/register/owner" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": {
-      "name": "Diana Florea",
-      "email": "diana.florea@gmail.com",
-      "password": "Test@1234",
-      "confirmPassword": "Test@1234"
-    },
-    "pet": {
-      "name": "Rocky",
-      "type": "Dog",
-      "breed": "Labrador Retriever",
-      "age": 4,
-      "weight": 28
-    }
-  }'
-echo ""
-
-echo -e "\n========================================="
-echo "  Seeding 5 Doctors"
+echo "  Seeding 10 Doctors"
 echo "========================================="
 
 echo -e "\n→ Registering Doctor 1: Stefan Vladescu"
@@ -244,7 +140,122 @@ curl -s -X POST "$BASE_URL/register/doctor" \
   }'
 echo ""
 
+echo -e "\n→ Registering Doctor 6: Ionut Popa"
+curl -s -X POST "$BASE_URL/register/doctor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doctor": {
+      "name": "Ionut Popa",
+      "email": "ionut.popa@gmail.com",
+      "password": "Test@1234",
+      "confirmPassword": "Test@1234",
+      "clinicName": "Paws & Claws",
+      "clinicAddress": "Str. Lalelelor 1, Sibiu",
+      "specializations": [
+        {
+          "name": "Neurology",
+          "services": [
+            { "name": "Consultation", "price": 250 }
+          ]
+        }
+      ]
+    }
+  }'
+echo ""
+
+echo -e "\n→ Registering Doctor 7: Maria Ionescu"
+curl -s -X POST "$BASE_URL/register/doctor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doctor": {
+      "name": "Maria Ionescu",
+      "email": "maria.ionescu@gmail.com",
+      "password": "Test@1234",
+      "confirmPassword": "Test@1234",
+      "clinicName": "CareVet",
+      "clinicAddress": "Str. Garii 22, Arad",
+      "specializations": [
+        {
+          "name": "Oncology",
+          "services": [
+            { "name": "Consultation", "price": 300 }
+          ]
+        }
+      ]
+    }
+  }'
+echo ""
+
+echo -e "\n→ Registering Doctor 8: Elena Radu"
+curl -s -X POST "$BASE_URL/register/doctor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doctor": {
+      "name": "Elena Radu",
+      "email": "elena.radu@gmail.com",
+      "password": "Test@1234",
+      "confirmPassword": "Test@1234",
+      "clinicName": "City Vet",
+      "clinicAddress": "Bd. Carol I 15, Craiova",
+      "specializations": [
+        {
+          "name": "Dentistry",
+          "services": [
+            { "name": "Dental Checkup", "price": 150 }
+          ]
+        }
+      ]
+    }
+  }'
+echo ""
+
+echo -e "\n→ Registering Doctor 9: Andrei Nita"
+curl -s -X POST "$BASE_URL/register/doctor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doctor": {
+      "name": "Andrei Nita",
+      "email": "andrei.nita@gmail.com",
+      "password": "Test@1234",
+      "confirmPassword": "Test@1234",
+      "clinicName": "Family Vet",
+      "clinicAddress": "Str. Principala 9, Oradea",
+      "specializations": [
+        {
+          "name": "Behavioral Medicine",
+          "services": [
+            { "name": "Behavioral Consultation", "price": 200 }
+          ]
+        }
+      ]
+    }
+  }'
+echo ""
+
+echo -e "\n→ Registering Doctor 10: Gabriela Stoica"
+curl -s -X POST "$BASE_URL/register/doctor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doctor": {
+      "name": "Gabriela Stoica",
+      "email": "gabriela.stoica@gmail.com",
+      "password": "Test@1234",
+      "confirmPassword": "Test@1234",
+      "clinicName": "Premium Vet",
+      "clinicAddress": "Bd. Mamaia 44, Constanta",
+      "specializations": [
+        {
+          "name": "Exotic Pets",
+          "services": [
+            { "name": "Exotic Pet Consultation", "price": 180 }
+          ]
+        }
+      ]
+    }
+  }'
+echo ""
+
 echo -e "\n========================================="
-echo "  Done! All 10 users seeded."
+echo "  Done! All 10 doctors seeded."
 echo "  Password for all: Test@1234"
 echo "========================================="
