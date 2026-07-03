@@ -55,7 +55,7 @@
     "@as-integrations/express5": "^1.1.2",
     "@asteasolutions/zod-to-openapi": "8.5.0",
     "@escape.tech/graphql-armor": "3.2.0",
-    "@sentry/node": "10.53.1",
+    "@sentry/node": "10.63.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "1.4.7",
     "cors": "^2.8.5",
